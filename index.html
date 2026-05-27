@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Circle of Life Hospital — PRMS</title>
+  <link rel="stylesheet" href="style.css"/>
+  <script>
+    const t = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  </script>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="navbar-logo">
+    <div class="logo-icon">🏥</div>
+    <span class="logo-text">Circle of <span>Life</span></span>
+  </a>
+  <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
+</nav>
+
+<section class="hero">
+  <div class="hero-badge">Integrated Healthcare Platform</div>
+  <h1>Patient Record<br/><em>Management System</em></h1>
+  <p>Secure, real-time access to patient records, vitals, appointments, and more — for every member of your care team.</p>
+</section>
+
+<section class="portals">
+  <h2>Select Your Portal</h2>
+  <div class="portal-grid">
+    <a href="patient-login.html" class="portal-card patient">
+      <div class="portal-icon">🧑‍⚕️</div>
+      <span class="portal-role">Patient</span>
+      <h3>Patient Portal</h3>
+      <p>View your medical records, upcoming appointments, medications, and personal health data.</p>
+      <span class="portal-link">Access Portal →</span>
+    </a>
+    <a href="nurse-login.html" class="portal-card nurse">
+      <div class="portal-icon">💉</div>
+      <span class="portal-role">Nurse</span>
+      <h3>Nurse Portal</h3>
+      <p>Record patient vitals, add nursing notes, and manage patient care activities efficiently.</p>
+      <span class="portal-link">Access Portal →</span>
+    </a>
+    <a href="doctor-login.html" class="portal-card doctor">
+      <div class="portal-icon">👨‍⚕️</div>
+      <span class="portal-role">Doctor</span>
+      <h3>Doctor Portal</h3>
+      <p>Add diagnoses, prescribe medications, review patient histories and clinical records.</p>
+      <span class="portal-link">Access Portal →</span>
+    </a>
+    <a href="admin-login.html" class="portal-card admin">
+      <div class="portal-icon">🛡️</div>
+      <span class="portal-role">Admin</span>
+      <h3>Admin Portal</h3>
+      <p>Manage staff accounts, monitor system access logs, and oversee hospital operations.</p>
+      <span class="portal-link">Access Portal →</span>
+    </a>
+  </div>
+</section>
+
+<footer>
+  <p>© 2025 Circle of Life Hospital · Patient Record Management System · All rights reserved.</p>
+</footer>
+
+<script type="module">
+  const toggle = document.getElementById('themeToggle');
+  const apply  = t => { document.documentElement.setAttribute('data-theme',t); localStorage.setItem('theme',t); toggle.textContent = t==='dark'?'☀️':'🌙'; };
+  apply(localStorage.getItem('theme')||'light');
+  toggle.addEventListener('click',()=>apply(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark'));
+</script>
+</body>
+</html>

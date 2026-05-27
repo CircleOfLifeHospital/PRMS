@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard — Circle of Life Hospital</title>
+  <link rel="stylesheet" href="style.css"/>
+  <script>const t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t);</script>
+</head>
+<body>
+<div class="dashboard-layout">
+  <aside class="sidebar">
+    <a href="index.html" class="sidebar-logo"><div class="logo-icon">🏥</div><div class="logo-text">Circle of <span>Life</span></div></a>
+    <div class="sidebar-user">
+      <div class="user-avatar" style="background:rgba(183,28,28,0.15);color:#B71C1C;" id="userAvatar">A</div>
+      <div class="user-name" id="userName">Loading…</div>
+      <div class="user-role">Administrator</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Administration</div>
+      <a href="#stats" class="active"><span class="nav-icon">📊</span> Overview</a>
+      <a href="#staff-table"><span class="nav-icon">👥</span> Staff Accounts</a>
+      <a href="#add-staff"><span class="nav-icon">➕</span> Add Staff</a>
+      <a href="#access-log"><span class="nav-icon">🔍</span> Access Log</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="sidebar-theme-btn" id="themeToggle">🌙 <span id="themeLabel">Dark Mode</span></button>
+      <button id="logoutBtn">🚪 Sign Out</button>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="main-header">
+      <h1>Admin Dashboard</h1>
+      <p id="headerSub">Hospital administration and system oversight.</p>
+    </div>
+    <div class="content-body">
+      <div class="stats-grid admin-role" id="stats">
+        <div class="stat-card"><div class="stat-icon">🧑‍⚕️</div><div class="stat-label">Total Patients</div><div class="stat-value" id="statPatients">—</div></div>
+        <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-label">Staff Members</div><div class="stat-value" id="statStaff">—</div></div>
+        <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-label">Medical Records</div><div class="stat-value" id="statRecords">—</div></div>
+        <div class="stat-card"><div class="stat-icon">🔍</div><div class="stat-label">Access Log Entries</div><div class="stat-value" id="statLogs">—</div></div>
+      </div>
+      <div class="section-card" id="staff-table">
+        <div class="section-header">
+          <h2>👥 Staff Accounts</h2>
+          <input class="search-input" id="staffSearch" type="text" placeholder="Search staff…"/>
+        </div>
+        <div class="section-body table-wrap">
+          <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Department</th></tr></thead>
+          <tbody id="staffBody"><tr><td colspan="4"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody></table>
+        </div>
+      </div>
+      <div class="section-card" id="add-staff">
+        <div class="section-header"><h2>➕ Add Staff Member</h2></div>
+        <div class="section-body">
+          <div class="form-grid">
+            <div class="form-group"><label for="sName">Full Name</label><input type="text" id="sName" placeholder="e.g. Dr. Jane Doe"/></div>
+            <div class="form-group"><label for="sEmail">Email</label><input type="email" id="sEmail" placeholder="staff@colh.com"/></div>
+            <div class="form-group">
+              <label for="sRole">Role</label>
+              <select id="sRole">
+                <option value="">— Select Role —</option>
+                <option value="nurse">Nurse</option>
+                <option value="doctor">Doctor</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div class="form-group"><label for="sDept">Department</label><input type="text" id="sDept" placeholder="e.g. Emergency, Ward B"/></div>
+          </div>
+          <button class="btn admin" id="saveStaffBtn">💾 Add Staff</button>
+          <p class="success-msg" id="staffSuccess">✅ Staff member added successfully.</p>
+          <p class="error-msg" id="staffError"></p>
+        </div>
+      </div>
+      <div class="section-card">
+        <div class="section-header">
+          <h2>🧑‍⚕️ All Patients</h2>
+          <input class="search-input" id="patientSearch" type="text" placeholder="Search patients…"/>
+        </div>
+        <div class="section-body table-wrap">
+          <table><thead><tr><th>Patient ID</th><th>Name</th><th>Email</th><th>DOB</th><th>Medicare No.</th><th>Contact</th></tr></thead>
+          <tbody id="patientsBody"><tr><td colspan="6"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody></table>
+        </div>
+      </div>
+      <div class="section-card" id="access-log">
+        <div class="section-header"><h2>🔍 Access Log</h2></div>
+        <div class="section-body table-wrap">
+          <table><thead><tr><th>Timestamp</th><th>Patient ID</th><th>Staff ID</th><th>Action</th></tr></thead>
+          <tbody id="logBody"><tr><td colspan="4"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script type="module" src="./script.js"></script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Nurse Login — Circle of Life Hospital</title>
+  <link rel="stylesheet" href="style.css"/>
+  <script>const t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t);</script>
+</head>
+<body>
+<nav class="navbar">
+  <a href="index.html" class="navbar-logo"><div class="logo-icon">🏥</div><span class="logo-text">Circle of <span>Life</span></span></a>
+  <button class="theme-toggle" id="themeToggle">🌙</button>
+</nav>
+<div class="login-container">
+  <div class="login-card">
+    <span class="login-role-badge" style="background:rgba(0,150,136,0.1);color:#009688;">💉 &nbsp; Nurse Portal</span>
+    <h2>Staff Sign In</h2>
+    <p class="subtitle">Access the nursing care management dashboard.</p>
+    <div class="form-group">
+      <label for="email">Email Address</label>
+      <input type="email" id="email" placeholder="nurse@colh.com" autocomplete="email"/>
+    </div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <button class="btn btn-primary nurse" id="loginBtn">Sign In</button>
+    <p class="error-msg" id="errorMsg"></p>
+    <a href="index.html" class="back-link">← Back to Portal Selection</a>
+  </div>
+</div>
+<script type="module" src="./script.js"></script>
+</body>
+</html>
