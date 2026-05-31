@@ -1,439 +1,734 @@
 import {
   auth, db,
-  onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword,
+  onAuthStateChanged, signInWithEmailAndPassword, signOut,
+  createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup,
   collection, addDoc, getDocs, getDoc,
   query, where, orderBy, serverTimestamp,
-  doc, updateDoc, deleteDoc
+  doc, updateDoc, deleteDoc, onSnapshot, setDoc
 } from './firebase-init.js';
 
-// ─── Page detection ───────────────────────────────────────────────────────────
-const PAGE = window.location.pathname.split('/').pop() || 'index.html';
+/* ══════════════════════════════════════════════════════════
+   HELPERS
+   ══════════════════════════════════════════════════════════ */
+const page = location.pathname.split('/').pop() || 'index.html';
+const $ = id => document.getElementById(id);
 
-const LOGIN_PAGES     = ['patient-login.html','nurse-login.html','doctor-login.html','admin-login.html'];
-const DASHBOARD_PAGES = ['patient-dashboard.html','nurse-dashboard.html','doctor-dashboard.html','admin-dashboard.html'];
+function showErr(id, msg) {
+  const el = $(id); if (!el) return;
+  el.textContent = msg; el.classList.add('show');
+}
+function hideErr(id) { const el=$(id); if(el) el.classList.remove('show'); }
+function showSuccess(id) {
+  const el=$(id); if(!el) return;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 3500);
+}
 
-// ─── Theme ────────────────────────────────────────────────────────────────────
+function fmtDate(ts) {
+  if (!ts) return '—';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString('en-AU', {day:'2-digit',month:'short',year:'numeric'});
+}
+
 function initTheme() {
-  const toggle = document.getElementById('themeToggle');
-  const label  = document.getElementById('themeLabel');
-  if (!toggle) return;
+  const toggle = $('themeToggle'); if (!toggle) return;
   const apply = t => {
     document.documentElement.setAttribute('data-theme', t);
     localStorage.setItem('theme', t);
-    toggle.textContent = t === 'dark' ? '☀️' : '🌙';
-    if (label) label.textContent = t === 'dark' ? 'Light Mode' : 'Dark Mode';
+    const label = $('themeLabel');
+    toggle.innerHTML = t === 'dark' ? '☀️ <span id="themeLabel">Light Mode</span>' : '🌙 <span id="themeLabel">Dark Mode</span>';
   };
   apply(localStorage.getItem('theme') || 'light');
-  toggle.addEventListener('click', () =>
-    apply(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark')
-  );
+  toggle.addEventListener('click', () => apply(
+    document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'
+  ));
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const $  = id => document.getElementById(id);
-const val = id => { const e = $(id); return e ? e.value.trim() : ''; };
-const setText = (id, t) => { const e = $(id); if (e) e.textContent = t; };
-
-function showErr(id, msg) {
-  const e = $(id);
-  if (!e) return;
-  e.textContent = msg || '';
-  e.style.display = msg ? 'block' : 'none';
-}
-function showSuccess(id) {
-  const e = $(id);
-  if (!e) return;
-  e.style.display = 'block';
-  setTimeout(() => { e.style.display = 'none'; }, 3000);
-}
-function clearForm(ids) {
-  ids.forEach(id => { const e = $(id); if (e) e.value = ''; });
+/* Tab navigation for dashboards */
+function initTabs() {
+  const tabs = document.querySelectorAll('.tab-nav a[data-tab]');
+  const panels = document.querySelectorAll('.tab-panel');
+  if (!tabs.length) return;
+  tabs.forEach(tab => {
+    tab.addEventListener('click', e => {
+      e.preventDefault();
+      tabs.forEach(t => t.classList.remove('active'));
+      panels.forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      const target = document.getElementById(tab.dataset.tab);
+      if (target) target.classList.add('active');
+    });
+  });
 }
 
-async function fetchAll(col, constraints = []) {
-  try {
-    const ref = collection(db, col);
-    const q   = constraints.length ? query(ref, ...constraints) : query(ref);
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ _id: d.id, ...d.data() }));
-  } catch (err) {
-    console.error(`fetchAll(${col}):`, err);
-    return [];
-  }
-}
-
-function renderTable(tbodyId, rows, colspan, rowFn) {
-  const tbody = $(tbodyId);
-  if (!tbody) return;
-  if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;padding:24px;color:var(--text-muted)">No records found.</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = rows.map(r => `<tr>${rowFn(r)}</tr>`).join('');
-}
-
-function wireSearch(inputId, tbodyId, rows, colspan, rowFn, keyFn) {
-  const input = $(inputId);
-  if (!input) return;
+/* Simple search filter for tables */
+function filterTable(inputId, bodyId) {
+  const input = $(inputId), tbody = $(bodyId);
+  if (!input || !tbody) return;
   input.addEventListener('input', () => {
     const q = input.value.toLowerCase();
-    renderTable(tbodyId, q ? rows.filter(r => keyFn(r).includes(q)) : rows, colspan, rowFn);
+    tbody.querySelectorAll('tr').forEach(row => {
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
   });
 }
 
-async function logAccess(action, patientID, staffID) {
-  try { await addDoc(collection(db, 'accessLog'), { action, patientID, staffID, timestamp: serverTimestamp() }); }
-  catch (e) { console.error('logAccess:', e); }
-}
-
-// ─── Role detection ───────────────────────────────────────────────────────────
-async function getRoleData(user) {
-  // Check patients
-  const pSnap = await getDocs(query(collection(db, 'patients'), where('firebaseUid', '==', user.uid)));
-  if (!pSnap.empty) {
-    const d = pSnap.docs[0].data();
-    return { role: 'patient', id: d.patientId, data: d };
-  }
-  // Check staff by email
-  const sSnap = await getDocs(query(collection(db, 'staff'), where('email', '==', user.email)));
-  if (!sSnap.empty) {
-    const d = sSnap.docs[0].data();
-    return { role: (d.role || '').toLowerCase(), id: sSnap.docs[0].id, data: d };
-  }
-  return { role: null, id: null, data: null };
-}
-
-function dashboardFor(role) {
-  return { patient: 'patient-dashboard.html', nurse: 'nurse-dashboard.html', doctor: 'doctor-dashboard.html', admin: 'admin-dashboard.html' }[role] || 'index.html';
-}
-
-// ─── Auth state ───────────────────────────────────────────────────────────────
-onAuthStateChanged(auth, async user => {
-  if (user) {
-    const { role, id, data } = await getRoleData(user);
-    if (!role) { await signOut(auth); window.location.href = 'index.html'; return; }
-
-    if (LOGIN_PAGES.includes(PAGE)) {
-      window.location.href = dashboardFor(role);
-      return;
-    }
-
-    initTheme();
-    wireLogout();
-
-    if (PAGE === 'patient-dashboard.html')  { if (role==='patient') loadPatient(id, data);   else window.location.href = dashboardFor(role); }
-    if (PAGE === 'nurse-dashboard.html')    { if (role==='nurse')   loadNurse(id, data);     else window.location.href = dashboardFor(role); }
-    if (PAGE === 'doctor-dashboard.html')   { if (role==='doctor')  loadDoctor(id, data);    else window.location.href = dashboardFor(role); }
-    if (PAGE === 'admin-dashboard.html')    { if (role==='admin')   loadAdmin(id, data);     else window.location.href = dashboardFor(role); }
-
-  } else {
-    if (DASHBOARD_PAGES.includes(PAGE)) window.location.href = 'index.html';
-  }
-});
-
-// ─── Logout ───────────────────────────────────────────────────────────────────
-function wireLogout() {
-  const btn = $('logoutBtn');
-  if (btn) btn.addEventListener('click', async () => { await signOut(auth); window.location.href = 'index.html'; });
-}
-
-// ─── Login pages ──────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  initTheme();
-  if (LOGIN_PAGES.includes(PAGE)) wireLogin(PAGE.replace('-login.html', ''));
-  if (PAGE === 'register-patient.html') wireRegister();
-});
-
-function wireLogin(expectedRole) {
-  const btn    = $('loginBtn');
-  const errMsg = $('errorMsg');
-  if (!btn) return;
-
-  btn.addEventListener('click', async () => {
-    const email    = val('email');
-    const password = val('password');
-    if (!email || !password) { showErr('errorMsg', 'Please enter your email and password.'); return; }
-
-    btn.disabled    = true;
-    btn.textContent = 'Signing in…';
-    if (errMsg) errMsg.style.display = 'none';
-
-    try {
-      const cred = await signInWithEmailAndPassword(auth, email, password);
-      const { role } = await getRoleData(cred.user);
-
-      if (role !== expectedRole) {
+/* ══════════════════════════════════════════════════════════
+   GOOGLE SIGN-IN HELPER
+   ══════════════════════════════════════════════════════════ */
+async function googleSignIn(expectedRole, redirectUrl) {
+  const provider = new GoogleAuthProvider();
+  try {
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+    // Check if user doc exists
+    const snap = await getDoc(doc(db, 'users', user.uid));
+    if (snap.exists()) {
+      const data = snap.data();
+      if (data.role !== expectedRole) {
         await signOut(auth);
-        showErr('errorMsg', `This portal is for ${expectedRole}s only.`);
-        btn.disabled = false; btn.textContent = 'Sign In';
+        showErr('errorMsg', `This Google account is registered as a ${data.role}, not a ${expectedRole}.`);
         return;
       }
-      // onAuthStateChanged will redirect
-    } catch (err) {
-      const msg =
-        err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' ? 'Invalid email or password.' :
-        err.code === 'auth/user-not-found'  ? 'No account found with that email.' :
-        err.code === 'auth/invalid-email'   ? 'Please enter a valid email address.' :
-        err.message;
-      showErr('errorMsg', msg);
+      location.href = redirectUrl;
+    } else {
+      // Auto-create patient account via Google
+      if (expectedRole === 'patient') {
+        await setDoc(doc(db, 'users', user.uid), {
+          name: user.displayName || 'Patient',
+          email: user.email,
+          role: 'patient',
+          createdAt: serverTimestamp()
+        });
+        await addDoc(collection(db, 'patients'), {
+          uid: user.uid,
+          name: user.displayName || '',
+          email: user.email,
+          dob: '', medicare: '', contact: '', address: '',
+          createdAt: serverTimestamp()
+        });
+        location.href = redirectUrl;
+      } else {
+        await signOut(auth);
+        showErr('errorMsg', 'No account found for this Google account. Please contact your administrator.');
+      }
+    }
+  } catch(err) {
+    showErr('errorMsg', err.message);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   LOGIN PAGES
+   ══════════════════════════════════════════════════════════ */
+async function handleLogin(role, redirect) {
+  const emailEl = $('email'), passEl = $('password'), btn = $('loginBtn');
+  if (!emailEl) return;
+
+  hideErr('errorMsg');
+
+  async function doLogin() {
+    const email = emailEl.value.trim(), pass = passEl.value;
+    if (!email || !pass) { showErr('errorMsg', 'Please enter your email and password.'); return; }
+    btn.disabled = true; btn.textContent = 'Signing in…';
+    try {
+      const cred = await signInWithEmailAndPassword(auth, email, pass);
+      // Verify role
+      const snap = await getDoc(doc(db, 'users', cred.user.uid));
+      if (snap.exists() && snap.data().role !== role) {
+        await signOut(auth);
+        showErr('errorMsg', `This account is not registered as a ${role}.`);
+        btn.disabled = false; btn.textContent = 'Sign In'; return;
+      }
+      location.href = redirect;
+    } catch(err) {
+      const msgs = {
+        'auth/invalid-credential': 'Incorrect email or password.',
+        'auth/user-not-found': 'No account found with this email.',
+        'auth/wrong-password': 'Incorrect password.',
+        'auth/too-many-requests': 'Too many attempts. Try again later.',
+      };
+      showErr('errorMsg', msgs[err.code] || err.message);
       btn.disabled = false; btn.textContent = 'Sign In';
     }
-  });
-}
-
-// ─── Patient Registration ─────────────────────────────────────────────────────
-function wireRegister() {
-  const btn = $('registerPatientBtn');
-  if (!btn) return;
-  btn.addEventListener('click', async () => {
-    const email    = val('regEmail');
-    const password = val('regPassword');
-    const name     = val('regName');
-    const dob      = val('regDob');
-    const contact  = val('regContact');
-    const medicare = val('regMedicare');
-    if (!email || !password || !name || !dob || !contact) {
-      showStatus('Please fill in all required fields.', true); return;
-    }
-    try {
-      const cred  = await createUserWithEmailAndPassword(auth, email, password);
-      const newId = await generatePatientId();
-      await addDoc(collection(db, 'patients'), {
-        patientId: newId, email, name, dob, contact,
-        medicareNo: medicare || null,
-        firebaseUid: cred.user.uid
-      });
-      showStatus(`Registered! Your Patient ID is ${newId}.`);
-    } catch (err) { showStatus(err.message, true); }
-  });
-}
-
-async function generatePatientId() {
-  const snap = await getDocs(query(collection(db, 'patients'), orderBy('patientId', 'desc')));
-  if (!snap.empty) {
-    const last = snap.docs[0].data().patientId || 'P-00000';
-    const n = parseInt(last.split('-')[1] || '0');
-    if (!isNaN(n)) return `P-${String(n + 1).padStart(5, '0')}`;
-  }
-  return 'P-00001';
-}
-
-function showStatus(msg, isErr = false) {
-  const el = $('status-message');
-  if (!el) return;
-  el.textContent = msg;
-  el.className = `message${isErr ? ' error' : ''}`;
-  el.style.display = 'block';
-}
-
-// ═════════════════════════════════════════════════════════════════════════════
-// PATIENT DASHBOARD
-// ═════════════════════════════════════════════════════════════════════════════
-async function loadPatient(patientId, data) {
-  const name = data?.name || 'Patient';
-  setText('userName', name);
-  const av = $('userAvatar'); if (av) av.textContent = name[0].toUpperCase();
-  setText('headerSub', `Welcome back, ${name.split(' ')[0]}!`);
-
-  // Personal details
-  const grid = $('personalGrid');
-  if (grid) grid.innerHTML = `
-    <div class="info-item"><div class="info-label">Patient ID</div><div class="info-value">${data.patientId||'—'}</div></div>
-    <div class="info-item"><div class="info-label">Full Name</div><div class="info-value">${data.name||'—'}</div></div>
-    <div class="info-item"><div class="info-label">Date of Birth</div><div class="info-value">${data.dob||'—'}</div></div>
-    <div class="info-item"><div class="info-label">Contact</div><div class="info-value">${data.contact||'—'}</div></div>
-    <div class="info-item"><div class="info-label">Medicare No.</div><div class="info-value">${data.medicareNo||'—'}</div></div>
-    <div class="info-item"><div class="info-label">Email</div><div class="info-value">${data.email||'—'}</div></div>
-  `;
-
-  const [records, vitals, appts, meds, notes] = await Promise.all([
-    fetchAll('records',      [where('patientID','==',patientId), orderBy('date','desc')]),
-    fetchAll('vitals',       [where('patientId','==',patientId), orderBy('date','desc')]),
-    fetchAll('appointments', [where('patientId','==',patientId), orderBy('date','desc')]),
-    fetchAll('medications',  [where('patientId','==',patientId), orderBy('startDate','desc')]),
-    fetchAll('nursingNotes', [where('patientId','==',patientId), orderBy('date','desc')])
-  ]);
-
-  setText('statRecords', records.length);
-  setText('statAppts',   appts.length);
-  setText('statMeds',    meds.length);
-  setText('statVitals',  vitals.length);
-
-  // Vitals cards
-  const vg = $('vitalsGrid');
-  if (vg) {
-    if (!vitals.length) { vg.innerHTML = '<p style="color:var(--text-muted);padding:16px">No vitals recorded yet.</p>'; }
-    else {
-      const v = vitals[0];
-      vg.innerHTML = `
-        <div class="vital-card"><div class="vital-label">Blood Pressure</div><div class="vital-value">${v.bloodPressure||'—'}</div><div class="vital-unit">mmHg</div></div>
-        <div class="vital-card"><div class="vital-label">Heart Rate</div><div class="vital-value">${v.heartRate||'—'}</div><div class="vital-unit">bpm</div></div>
-        <div class="vital-card"><div class="vital-label">Temperature</div><div class="vital-value">${v.temperature||'—'}</div><div class="vital-unit">°C</div></div>
-        <div class="vital-card"><div class="vital-label">Weight</div><div class="vital-value">${v.weight||'—'}</div><div class="vital-unit">kg</div></div>
-        <div class="vital-card"><div class="vital-label">Recorded</div><div class="vital-value" style="font-size:0.95rem">${v.date||'—'}</div></div>
-      `;
-    }
   }
 
-  renderTable('recordsBody',      records, 4, r=>`<td>${r.date||'—'}</td><td>${r.diagnosis||'—'}</td><td>${r.treatment||'—'}</td><td>${r.notes||'—'}</td>`);
-  renderTable('appointmentsBody', appts,   4, a=>`<td>${a.date||'—'}</td><td>${a.time||'—'}</td><td>${a.purpose||'—'}</td><td>${a.location||'—'}</td>`);
-  renderTable('medsBody',         meds,    4, m=>`<td>${m.medicationName||'—'}</td><td>${m.dosage||'—'}</td><td>${m.frequency||'—'}</td><td>${m.startDate||'—'}</td>`);
-  renderTable('notesBody',        notes,   2, n=>`<td>${n.date||'—'}</td><td>${n.note||'—'}</td>`);
-}
+  btn.addEventListener('click', doLogin);
 
-// ═════════════════════════════════════════════════════════════════════════════
-// NURSE DASHBOARD
-// ═════════════════════════════════════════════════════════════════════════════
-async function loadNurse(staffId, data) {
-  const name = data?.name || 'Nurse';
-  setText('userName', name);
-  const av = $('userAvatar'); if (av) av.textContent = name[0].toUpperCase();
-
-  const pRow = p => `<td>${p.patientId||'—'}</td><td>${p.name||'—'}</td><td>${p.dob||'—'}</td><td>${p.medicareNo||'—'}</td><td>${p.contact||'—'}</td><td>${p.address||'—'}</td>`;
-  const vRow = v => `<td>${v.patientId||'—'}</td><td>${v.date||'—'}</td><td>${v.bloodPressure||'—'}</td><td>${v.heartRate||'—'}</td><td>${v.temperature||'—'}</td><td>${v.weight||'—'}</td>`;
-
-  const [patients, vitals] = await Promise.all([
-    fetchAll('patients', []),
-    fetchAll('vitals',   [orderBy('date','desc')])
-  ]);
-
-  renderTable('patientsBody',  patients, 6, pRow);
-  renderTable('vitalsLogBody', vitals,   6, vRow);
-  wireSearch('patientSearch', 'patientsBody', patients, 6, pRow, p=>`${p.patientId} ${p.name} ${p.contact}`.toLowerCase());
-
-  // Save vitals
-  const svBtn = $('saveVitalsBtn');
-  if (svBtn) svBtn.addEventListener('click', async () => {
-    const patientId = val('vPatientId'), date = val('vDate');
-    if (!patientId || !date) { showErr('vitalsError','Patient ID and date are required.'); return; }
-    try {
-      await addDoc(collection(db,'vitals'), {
-        patientId, date,
-        bloodPressure: val('vBP'), heartRate: val('vHR'),
-        temperature: val('vTemp'), weight: val('vWeight'),
-        staffID: staffId, timestamp: serverTimestamp()
-      });
-      showSuccess('vitalsSuccess'); showErr('vitalsError','');
-      clearForm(['vPatientId','vDate','vBP','vHR','vTemp','vWeight']);
-      const fresh = await fetchAll('vitals',[orderBy('date','desc')]);
-      renderTable('vitalsLogBody', fresh, 6, vRow);
-    } catch(e) { showErr('vitalsError', e.message); }
+  // *** Enter key to submit ***
+  [emailEl, passEl].forEach(el => {
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
   });
 
-  // Save note
-  const snBtn = $('saveNoteBtn');
-  if (snBtn) snBtn.addEventListener('click', async () => {
-    const patientId = val('nPatientId'), date = val('nDate'), note = val('nNote');
-    if (!patientId || !date || !note) { showErr('noteError','All fields are required.'); return; }
-    try {
-      await addDoc(collection(db,'nursingNotes'), { patientId, date, note, staffID: staffId, timestamp: serverTimestamp() });
-      showSuccess('noteSuccess'); showErr('noteError','');
-      clearForm(['nPatientId','nDate','nNote']);
-    } catch(e) { showErr('noteError', e.message); }
+  // Google button
+  const gBtn = $('googleBtn');
+  if (gBtn) {
+    gBtn.addEventListener('click', () => googleSignIn(role, redirect));
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   DASHBOARD AUTH GUARD + LOGOUT
+   ══════════════════════════════════════════════════════════ */
+async function requireAuth(expectedRole, loginPage) {
+  return new Promise(resolve => {
+    onAuthStateChanged(auth, async user => {
+      if (!user) { location.href = loginPage; return; }
+      const snap = await getDoc(doc(db, 'users', user.uid));
+      const data = snap.exists() ? snap.data() : null;
+      if (!data || data.role !== expectedRole) { location.href = loginPage; return; }
+
+      // Populate sidebar user info
+      const nameEl = $('userName');
+      if (nameEl) nameEl.textContent = data.name || user.email;
+      const avatarEl = $('userAvatar');
+      if (avatarEl) avatarEl.textContent = (data.name || user.email || 'U')[0].toUpperCase();
+
+      const logoutBtn = $('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+          await signOut(auth);
+          location.href = loginPage;
+        });
+      }
+
+      resolve({ user, data });
+    });
   });
 }
 
-// ═════════════════════════════════════════════════════════════════════════════
-// DOCTOR DASHBOARD
-// ═════════════════════════════════════════════════════════════════════════════
-async function loadDoctor(staffId, data) {
-  const name = data?.name || 'Doctor';
-  setText('userName', name);
-  const av = $('userAvatar'); if (av) av.textContent = name[0].toUpperCase();
+/* ══════════════════════════════════════════════════════════
+   ADMIN DASHBOARD
+   ══════════════════════════════════════════════════════════ */
+async function initAdminDashboard() {
+  await requireAuth('admin', 'admin-login.html');
+  initTheme(); initTabs();
 
-  const pRow = p => `<td>${p.patientId||'—'}</td><td>${p.name||'—'}</td><td>${p.dob||'—'}</td><td>${p.medicareNo||'—'}</td><td>${p.contact||'—'}</td>`;
-  const rRow = r => `<td>${r.patientID||'—'}</td><td>${r.date||'—'}</td><td>${r.diagnosis||'—'}</td><td>${r.treatment||'—'}</td><td>${r.notes||'—'}</td>`;
+  // Stats
+  async function loadStats() {
+    const [patSnap, staffSnap, recSnap, logSnap] = await Promise.all([
+      getDocs(collection(db, 'patients')),
+      getDocs(query(collection(db, 'users'), where('role', '!=', 'patient'))),
+      getDocs(collection(db, 'records')),
+      getDocs(collection(db, 'accessLog'))
+    ]);
+    if($('statPatients')) $('statPatients').textContent = patSnap.size;
+    if($('statStaff'))    $('statStaff').textContent    = staffSnap.size;
+    if($('statRecords'))  $('statRecords').textContent  = recSnap.size;
+    if($('statLogs'))     $('statLogs').textContent     = logSnap.size;
+  }
+  loadStats();
 
-  const [patients, records] = await Promise.all([
-    fetchAll('patients',[]),
-    fetchAll('records', [orderBy('date','desc')])
-  ]);
+  // Staff table — realtime
+  const staffBody = $('staffBody');
+  if (staffBody) {
+    onSnapshot(query(collection(db, 'users'), where('role', '!=', 'patient')), snap => {
+      if (snap.empty) { staffBody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">👥</div><p>No staff accounts found.</p></div></td></tr>'; return; }
+      staffBody.innerHTML = snap.docs.map(d => {
+        const s = d.data();
+        return `<tr>
+          <td>${s.name||'—'}</td>
+          <td>${s.email||'—'}</td>
+          <td><span class="badge badge-${s.role}">${s.role||'—'}</span></td>
+          <td>${s.department||'—'}</td>
+        </tr>`;
+      }).join('');
+    });
+    filterTable('staffSearch', 'staffBody');
+  }
 
-  renderTable('patientsBody', patients, 5, pRow);
-  renderTable('recordsBody',  records,  5, rRow);
-  wireSearch('patientSearch','patientsBody', patients, 5, pRow, p=>`${p.patientId} ${p.name}`.toLowerCase());
-  wireSearch('recordSearch', 'recordsBody',  records,  5, rRow, r=>`${r.patientID} ${r.diagnosis}`.toLowerCase());
+  // Patients table — realtime
+  const patientsBody = $('patientsBody');
+  if (patientsBody) {
+    onSnapshot(collection(db, 'patients'), snap => {
+      if (snap.empty) { patientsBody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">🧑‍⚕️</div><p>No patients registered.</p></div></td></tr>'; return; }
+      patientsBody.innerHTML = snap.docs.map(d => {
+        const p = d.data();
+        return `<tr>
+          <td><code>${d.id.slice(0,8)}</code></td>
+          <td>${p.name||'—'}</td>
+          <td>${p.email||'—'}</td>
+          <td>${p.dob||'—'}</td>
+          <td>${p.medicare||'—'}</td>
+          <td>${p.contact||'—'}</td>
+        </tr>`;
+      }).join('');
+    });
+    filterTable('patientSearch', 'patientsBody');
+  }
+
+  // Access log — realtime
+  const logBody = $('logBody');
+  if (logBody) {
+    onSnapshot(query(collection(db, 'accessLog'), orderBy('timestamp','desc')), snap => {
+      if (snap.empty) { logBody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">🔍</div><p>No log entries yet.</p></div></td></tr>'; return; }
+      logBody.innerHTML = snap.docs.map(d => {
+        const l = d.data();
+        return `<tr><td>${fmtDate(l.timestamp)}</td><td>${l.patientId||'—'}</td><td>${l.staffId||'—'}</td><td>${l.action||'—'}</td></tr>`;
+      }).join('');
+    });
+  }
+
+  // Add Staff
+  const saveStaffBtn = $('saveStaffBtn');
+  if (saveStaffBtn) {
+    saveStaffBtn.addEventListener('click', async () => {
+      const name=$('sName').value.trim(), email=$('sEmail').value.trim(),
+            role=$('sRole').value, dept=$('sDept').value.trim();
+      if (!name||!email||!role) { showErr('staffError','Please fill all required fields.'); return; }
+      hideErr('staffError');
+      saveStaffBtn.disabled = true;
+      try {
+        // Create auth user — password = email prefix + "123" as default
+        const tmpPass = email.split('@')[0] + 'Colh123!';
+        const cred = await createUserWithEmailAndPassword(auth, email, tmpPass);
+        await setDoc(doc(db, 'users', cred.user.uid), {
+          name, email, role, department: dept, createdAt: serverTimestamp()
+        });
+        await addDoc(collection(db, 'accessLog'), { action: `Staff created: ${name}`, staffId: cred.user.uid, patientId: '—', timestamp: serverTimestamp() });
+        showSuccess('staffSuccess');
+        ['sName','sEmail','sDept'].forEach(id => $(id) && ($(id).value=''));
+        $('sRole').value = '';
+        loadStats();
+      } catch(err) {
+        showErr('staffError', err.message);
+      }
+      saveStaffBtn.disabled = false;
+    });
+  }
+
+  // Register Patient (admin)
+  const savePatientBtn = $('savePatientBtn');
+  if (savePatientBtn) {
+    savePatientBtn.addEventListener('click', async () => {
+      const name=$('rpName').value.trim(), email=$('rpEmail').value.trim(),
+            dob=$('rpDOB').value, medicare=$('rpMedicare').value.trim(),
+            contact=$('rpContact').value.trim(), address=$('rpAddress').value.trim();
+      if (!name||!email) { showErr('patientRegError','Name and email are required.'); return; }
+      hideErr('patientRegError');
+      savePatientBtn.disabled = true;
+      try {
+        const tmpPass = email.split('@')[0] + 'Patient123!';
+        const cred = await createUserWithEmailAndPassword(auth, email, tmpPass);
+        await setDoc(doc(db, 'users', cred.user.uid), {
+          name, email, role: 'patient', createdAt: serverTimestamp()
+        });
+        await addDoc(collection(db, 'patients'), {
+          uid: cred.user.uid, name, email, dob, medicare, contact, address,
+          createdAt: serverTimestamp()
+        });
+        await addDoc(collection(db, 'accessLog'), { action: `Patient registered: ${name}`, staffId: 'admin', patientId: cred.user.uid, timestamp: serverTimestamp() });
+        showSuccess('patientRegSuccess');
+        ['rpName','rpEmail','rpDOB','rpMedicare','rpContact','rpAddress'].forEach(id => $(id) && ($(id).value=''));
+        loadStats();
+      } catch(err) {
+        showErr('patientRegError', err.message);
+      }
+      savePatientBtn.disabled = false;
+    });
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   DOCTOR DASHBOARD
+   ══════════════════════════════════════════════════════════ */
+async function initDoctorDashboard() {
+  const { user } = await requireAuth('doctor', 'doctor-login.html');
+  initTheme(); initTabs();
+
+  // Patients — realtime
+  const pBody = $('patientsBody');
+  if (pBody) {
+    onSnapshot(collection(db, 'patients'), snap => {
+      if (snap.empty) { pBody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">🧑‍⚕️</div><p>No patients yet.</p></div></td></tr>'; return; }
+      pBody.innerHTML = snap.docs.map(d => {
+        const p = d.data();
+        return `<tr>
+          <td><code>${d.id.slice(0,8)}</code></td>
+          <td>${p.name||'—'}</td>
+          <td>${p.dob||'—'}</td>
+          <td>${p.medicare||'—'}</td>
+          <td>${p.contact||'—'}</td>
+        </tr>`;
+      }).join('');
+    });
+    filterTable('patientSearch', 'patientsBody');
+  }
+
+  // Records — realtime
+  const rBody = $('recordsBody');
+  if (rBody) {
+    onSnapshot(query(collection(db, 'records'), orderBy('date','desc')), snap => {
+      if (snap.empty) { rBody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">📋</div><p>No records yet.</p></div></td></tr>'; return; }
+      rBody.innerHTML = snap.docs.map(d => {
+        const r = d.data();
+        return `<tr>
+          <td><code>${(r.patientId||'').slice(0,8)}</code></td>
+          <td>${r.patientName||'—'}</td>
+          <td>${r.date||'—'}</td>
+          <td>${r.diagnosis||'—'}</td>
+          <td>${r.treatment||'—'}</td>
+          <td>${r.notes||'—'}</td>
+        </tr>`;
+      }).join('');
+    });
+    filterTable('recordSearch', 'recordsBody');
+  }
+
+  // Prescriptions — realtime
+  const presBody = $('prescriptionsBody');
+  if (presBody) {
+    onSnapshot(query(collection(db, 'prescriptions'), orderBy('startDate','desc')), snap => {
+      if (snap.empty) { presBody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">💊</div><p>No prescriptions yet.</p></div></td></tr>'; return; }
+      presBody.innerHTML = snap.docs.map(d => {
+        const p = d.data();
+        return `<tr>
+          <td><code>${(p.patientId||'').slice(0,8)}</code></td>
+          <td>${p.patientName||'—'}</td>
+          <td>${p.medName||'—'}</td>
+          <td>${p.dosage||'—'}</td>
+          <td>${p.frequency||'—'}</td>
+          <td>${p.startDate||'—'}</td>
+        </tr>`;
+      }).join('');
+    });
+    filterTable('presSearch', 'prescriptionsBody');
+  }
+
+  // Appointments
+  const apptBody = $('apptBody');
+  if (apptBody) {
+    onSnapshot(query(collection(db, 'appointments'), orderBy('date','desc')), snap => {
+      if (snap.empty) { apptBody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">📅</div><p>No appointments yet.</p></div></td></tr>'; return; }
+      apptBody.innerHTML = snap.docs.map(d => {
+        const a = d.data();
+        return `<tr>
+          <td>${a.patientName||'—'}</td>
+          <td>${a.date||'—'}</td>
+          <td>${a.time||'—'}</td>
+          <td>${a.purpose||'—'}</td>
+          <td><span class="pill">${a.status||'scheduled'}</span></td>
+        </tr>`;
+      }).join('');
+    });
+  }
+
+  // Patient ID autocomplete helper
+  async function resolvePatient(idInputId, nameDisplayId) {
+    // We'll search patients by ID prefix or name
+  }
 
   // Save diagnosis
-  const sdBtn = $('saveDiagnosisBtn');
-  if (sdBtn) sdBtn.addEventListener('click', async () => {
-    const patientID = val('dPatientId'), date = val('dDate'), diagnosis = val('dDiagnosis');
-    if (!patientID || !date || !diagnosis) { showErr('diagnosisError','Patient ID, date and diagnosis are required.'); return; }
-    try {
-      await addDoc(collection(db,'records'), {
-        patientID, date, diagnosis,
-        treatment: val('dTreatment'), notes: val('dNotes'),
-        staffID: staffId, timestamp: serverTimestamp()
-      });
-      await logAccess('Added diagnosis', patientID, staffId);
-      showSuccess('diagnosisSuccess'); showErr('diagnosisError','');
-      clearForm(['dPatientId','dDate','dDiagnosis','dTreatment','dNotes']);
-      const fresh = await fetchAll('records',[orderBy('date','desc')]);
-      renderTable('recordsBody', fresh, 5, rRow);
-    } catch(e) { showErr('diagnosisError', e.message); }
-  });
+  const saveDiagBtn = $('saveDiagnosisBtn');
+  if (saveDiagBtn) {
+    saveDiagBtn.addEventListener('click', async () => {
+      const patientId=$('dPatientId').value.trim(), date=$('dDate').value,
+            diagnosis=$('dDiagnosis').value.trim(), treatment=$('dTreatment').value.trim(),
+            notes=$('dNotes').value.trim();
+      if (!patientId||!diagnosis) { showErr('diagnosisError','Patient ID and Diagnosis are required.'); return; }
+      hideErr('diagnosisError');
+      saveDiagBtn.disabled = true;
+      try {
+        // Try to get patient name
+        let patientName = patientId;
+        const pSnap = await getDocs(query(collection(db,'patients'), where('uid','==',patientId)));
+        if (!pSnap.empty) patientName = pSnap.docs[0].data().name || patientId;
 
-  // Save prescription
-  const spBtn = $('savePrescriptionBtn');
-  if (spBtn) spBtn.addEventListener('click', async () => {
-    const patientId = val('pPatientId'), medicationName = val('pMedName');
-    if (!patientId || !medicationName) { showErr('prescriptionError','Patient ID and medication name are required.'); return; }
-    try {
-      await addDoc(collection(db,'medications'), {
-        patientId, medicationName,
-        dosage: val('pDosage'), frequency: val('pFrequency'), startDate: val('pStartDate'),
-        staffID: staffId, timestamp: serverTimestamp()
-      });
-      await logAccess('Prescribed medication', patientId, staffId);
-      showSuccess('prescriptionSuccess'); showErr('prescriptionError','');
-      clearForm(['pPatientId','pMedName','pDosage','pFrequency','pStartDate']);
-    } catch(e) { showErr('prescriptionError', e.message); }
-  });
+        await addDoc(collection(db, 'records'), {
+          patientId, patientName, date, diagnosis, treatment, notes,
+          doctorId: (await auth.currentUser).uid,
+          createdAt: serverTimestamp()
+        });
+        await addDoc(collection(db, 'accessLog'), {
+          action: `Diagnosis added: ${diagnosis}`, staffId: (await auth.currentUser).uid,
+          patientId, timestamp: serverTimestamp()
+        });
+        showSuccess('diagnosisSuccess');
+        ['dPatientId','dDate','dDiagnosis','dTreatment','dNotes'].forEach(id => $(id) && ($(id).value=''));
+      } catch(err) { showErr('diagnosisError', err.message); }
+      saveDiagBtn.disabled = false;
+    });
+  }
+
+  // Save prescription — realtime push
+  const savePresBtn = $('savePrescriptionBtn');
+  if (savePresBtn) {
+    savePresBtn.addEventListener('click', async () => {
+      const patientId=$('pPatientId').value.trim(), medName=$('pMedName').value.trim(),
+            dosage=$('pDosage').value.trim(), frequency=$('pFrequency').value.trim(),
+            startDate=$('pStartDate').value;
+      if (!patientId||!medName) { showErr('prescriptionError','Patient ID and Medication are required.'); return; }
+      hideErr('prescriptionError');
+      savePresBtn.disabled = true;
+      try {
+        let patientName = patientId;
+        const pSnap = await getDocs(query(collection(db,'patients'), where('uid','==',patientId)));
+        if (!pSnap.empty) patientName = pSnap.docs[0].data().name || patientId;
+
+        await addDoc(collection(db, 'prescriptions'), {
+          patientId, patientName, medName, dosage, frequency, startDate,
+          doctorId: auth.currentUser.uid,
+          createdAt: serverTimestamp()
+        });
+        showSuccess('prescriptionSuccess');
+        ['pPatientId','pMedName','pDosage','pFrequency','pStartDate'].forEach(id => $(id) && ($(id).value=''));
+      } catch(err) { showErr('prescriptionError', err.message); }
+      savePresBtn.disabled = false;
+    });
+  }
+
+  // Save appointment
+  const saveApptBtn = $('saveApptBtn');
+  if (saveApptBtn) {
+    saveApptBtn.addEventListener('click', async () => {
+      const patientId=$('aPatientId').value.trim(), date=$('aDate').value,
+            time=$('aTime').value, purpose=$('aPurpose').value.trim(),
+            location=$('aLocation').value.trim();
+      if (!patientId||!date||!purpose) { showErr('apptError','Patient ID, date, and purpose are required.'); return; }
+      hideErr('apptError');
+      saveApptBtn.disabled = true;
+      try {
+        let patientName = patientId;
+        const pSnap = await getDocs(query(collection(db,'patients'), where('uid','==',patientId)));
+        if (!pSnap.empty) patientName = pSnap.docs[0].data().name || patientId;
+
+        await addDoc(collection(db, 'appointments'), {
+          patientId, patientName, date, time, purpose, location: location||'Main Clinic',
+          status: 'scheduled', createdAt: serverTimestamp()
+        });
+        showSuccess('apptSuccess');
+        ['aPatientId','aDate','aTime','aPurpose','aLocation'].forEach(id => $(id) && ($(id).value=''));
+      } catch(err) { showErr('apptError', err.message); }
+      saveApptBtn.disabled = false;
+    });
+  }
 }
 
-// ═════════════════════════════════════════════════════════════════════════════
-// ADMIN DASHBOARD
-// ═════════════════════════════════════════════════════════════════════════════
-async function loadAdmin(staffId, data) {
-  const name = data?.name || 'Admin';
-  setText('userName', name);
-  const av = $('userAvatar'); if (av) av.textContent = name[0].toUpperCase();
+/* ══════════════════════════════════════════════════════════
+   NURSE DASHBOARD
+   ══════════════════════════════════════════════════════════ */
+async function initNurseDashboard() {
+  await requireAuth('nurse', 'nurse-login.html');
+  initTheme(); initTabs();
 
-  const sRow = s => `<td>${s.name||'—'}</td><td>${s.email||'—'}</td><td>${s.role||'—'}</td><td>${s.department||'—'}</td>`;
-  const pRow = p => `<td>${p.patientId||'—'}</td><td>${p.name||'—'}</td><td>${p.email||'—'}</td><td>${p.dob||'—'}</td><td>${p.medicareNo||'—'}</td><td>${p.contact||'—'}</td>`;
-  const lRow = l => `<td>${l.timestamp?.toDate?l.timestamp.toDate().toLocaleString():'—'}</td><td>${l.patientID||'—'}</td><td>${l.staffID||'—'}</td><td>${l.action||'—'}</td>`;
+  // Patients
+  const pBody = $('patientsBody');
+  if (pBody) {
+    onSnapshot(collection(db, 'patients'), snap => {
+      if (snap.empty) { pBody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">🧑‍⚕️</div><p>No patients yet.</p></div></td></tr>'; return; }
+      pBody.innerHTML = snap.docs.map(d => {
+        const p = d.data();
+        return `<tr><td><code>${d.id.slice(0,8)}</code></td><td>${p.name||'—'}</td><td>${p.dob||'—'}</td><td>${p.medicare||'—'}</td><td>${p.contact||'—'}</td><td>${p.address||'—'}</td></tr>`;
+      }).join('');
+    });
+    filterTable('patientSearch', 'patientsBody');
+  }
 
-  const [patients, staff, records, logs] = await Promise.all([
-    fetchAll('patients',  []),
-    fetchAll('staff',     []),
-    fetchAll('records',   []),
-    fetchAll('accessLog', [orderBy('timestamp','desc')])
-  ]);
+  // Vitals log — realtime
+  const vLog = $('vitalsLogBody');
+  if (vLog) {
+    onSnapshot(query(collection(db, 'vitals'), orderBy('date','desc')), snap => {
+      if (snap.empty) { vLog.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">📊</div><p>No vitals recorded.</p></div></td></tr>'; return; }
+      vLog.innerHTML = snap.docs.map(d => {
+        const v = d.data();
+        return `<tr><td>${v.patientName||v.patientId||'—'}</td><td>${v.date||'—'}</td><td>${v.bp||'—'}</td><td>${v.hr||'—'}</td><td>${v.temp||'—'}</td><td>${v.weight||'—'}</td></tr>`;
+      }).join('');
+    });
+  }
 
-  setText('statPatients', patients.length);
-  setText('statStaff',    staff.length);
-  setText('statRecords',  records.length);
-  setText('statLogs',     logs.length);
+  // Save vitals
+  const saveVBtn = $('saveVitalsBtn');
+  if (saveVBtn) {
+    saveVBtn.addEventListener('click', async () => {
+      const patientId=$('vPatientId').value.trim(), date=$('vDate').value,
+            bp=$('vBP').value.trim(), hr=$('vHR').value, temp=$('vTemp').value, weight=$('vWeight').value;
+      if (!patientId) { showErr('vitalsError','Patient ID is required.'); return; }
+      hideErr('vitalsError'); saveVBtn.disabled = true;
+      try {
+        let patientName = patientId;
+        const pSnap = await getDocs(query(collection(db,'patients'), where('uid','==',patientId)));
+        if (!pSnap.empty) patientName = pSnap.docs[0].data().name || patientId;
 
-  renderTable('staffBody',    staff,    4, sRow);
-  renderTable('patientsBody', patients, 6, pRow);
-  renderTable('logBody',      logs,     4, lRow);
+        await addDoc(collection(db, 'vitals'), {
+          patientId, patientName, date, bp, hr: Number(hr), temp: Number(temp), weight: Number(weight),
+          nurseId: auth.currentUser.uid, createdAt: serverTimestamp()
+        });
+        showSuccess('vitalsSuccess');
+        ['vPatientId','vDate','vBP','vHR','vTemp','vWeight'].forEach(id => $(id) && ($(id).value=''));
+      } catch(err) { showErr('vitalsError', err.message); }
+      saveVBtn.disabled = false;
+    });
+  }
 
-  wireSearch('staffSearch',   'staffBody',    staff,    4, sRow, s=>`${s.name} ${s.email} ${s.role}`.toLowerCase());
-  wireSearch('patientSearch', 'patientsBody', patients, 6, pRow, p=>`${p.patientId} ${p.name} ${p.email}`.toLowerCase());
+  // Save nursing note
+  const saveNBtn = $('saveNoteBtn');
+  if (saveNBtn) {
+    saveNBtn.addEventListener('click', async () => {
+      const patientId=$('nPatientId').value.trim(), date=$('nDate').value, note=$('nNote').value.trim();
+      if (!patientId||!note) { showErr('noteError','Patient ID and note are required.'); return; }
+      hideErr('noteError'); saveNBtn.disabled = true;
+      try {
+        let patientName = patientId;
+        const pSnap = await getDocs(query(collection(db,'patients'), where('uid','==',patientId)));
+        if (!pSnap.empty) patientName = pSnap.docs[0].data().name || patientId;
 
-  // Add staff
-  const asBtn = $('saveStaffBtn');
-  if (asBtn) asBtn.addEventListener('click', async () => {
-    const name = val('sName'), email = val('sEmail'), role = val('sRole'), dept = val('sDept');
-    if (!name || !email || !role) { showErr('staffError','Name, email and role are required.'); return; }
-    try {
-      await addDoc(collection(db,'staff'), { name, email, role, department: dept, timestamp: serverTimestamp() });
-      showSuccess('staffSuccess'); showErr('staffError','');
-      clearForm(['sName','sEmail','sRole','sDept']);
-      const fresh = await fetchAll('staff',[]);
-      setText('statStaff', fresh.length);
-      renderTable('staffBody', fresh, 4, sRow);
-    } catch(e) { showErr('staffError', e.message); }
-  });
+        await addDoc(collection(db, 'nursingNotes'), {
+          patientId, patientName, date, note,
+          nurseId: auth.currentUser.uid, createdAt: serverTimestamp()
+        });
+        showSuccess('noteSuccess');
+        ['nPatientId','nDate','nNote'].forEach(id => $(id) && ($(id).value=''));
+      } catch(err) { showErr('noteError', err.message); }
+      saveNBtn.disabled = false;
+    });
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   PATIENT DASHBOARD
+   ══════════════════════════════════════════════════════════ */
+async function initPatientDashboard() {
+  const { user } = await requireAuth('patient', 'patient-login.html');
+  initTheme(); initTabs();
+
+  // Get patient doc
+  let patientDoc = null;
+  const pSnap = await getDocs(query(collection(db, 'patients'), where('uid', '==', user.uid)));
+  if (!pSnap.empty) patientDoc = { id: pSnap.docs[0].id, ...pSnap.docs[0].data() };
+
+  // Personal details
+  const personalGrid = $('personalGrid');
+  if (personalGrid && patientDoc) {
+    personalGrid.innerHTML = `
+      <div class="info-item"><div class="label">Full Name</div><div class="value">${patientDoc.name||'—'}</div></div>
+      <div class="info-item"><div class="label">Date of Birth</div><div class="value">${patientDoc.dob||'—'}</div></div>
+      <div class="info-item"><div class="label">Email</div><div class="value">${patientDoc.email||'—'}</div></div>
+      <div class="info-item"><div class="label">Medicare No.</div><div class="value">${patientDoc.medicare||'—'}</div></div>
+      <div class="info-item"><div class="label">Contact</div><div class="value">${patientDoc.contact||'—'}</div></div>
+      <div class="info-item"><div class="label">Address</div><div class="value">${patientDoc.address||'—'}</div></div>
+    `;
+  }
+
+  // Medical records — realtime
+  const rBody = $('recordsBody');
+  if (rBody) {
+    onSnapshot(query(collection(db, 'records'), where('patientId', '==', user.uid), orderBy('date','desc')), snap => {
+      if($('statRecords')) $('statRecords').textContent = snap.size;
+      if (snap.empty) { rBody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">📋</div><p>No records yet.</p></div></td></tr>'; return; }
+      rBody.innerHTML = snap.docs.map(d => {
+        const r = d.data();
+        return `<tr><td>${r.date||'—'}</td><td>${r.diagnosis||'—'}</td><td>${r.treatment||'—'}</td><td>${r.notes||'—'}</td></tr>`;
+      }).join('');
+    });
+  }
+
+  // Medications — realtime (real-time push from doctor)
+  const mBody = $('medsBody');
+  if (mBody) {
+    onSnapshot(query(collection(db, 'prescriptions'), where('patientId', '==', user.uid), orderBy('startDate','desc')), snap => {
+      if($('statMeds')) $('statMeds').textContent = snap.size;
+      if (snap.empty) { mBody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">💊</div><p>No medications prescribed.</p></div></td></tr>'; return; }
+      mBody.innerHTML = snap.docs.map(d => {
+        const m = d.data();
+        return `<tr><td>${m.medName||'—'}</td><td>${m.dosage||'—'}</td><td>${m.frequency||'—'}</td><td>${m.startDate||'—'}</td></tr>`;
+      }).join('');
+    });
+  }
+
+  // Appointments — realtime
+  const aBody = $('appointmentsBody');
+  if (aBody) {
+    onSnapshot(query(collection(db, 'appointments'), where('patientId', '==', user.uid), orderBy('date','desc')), snap => {
+      if($('statAppts')) $('statAppts').textContent = snap.size;
+      if (snap.empty) { aBody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">📅</div><p>No appointments scheduled.</p></div></td></tr>'; return; }
+      aBody.innerHTML = snap.docs.map(d => {
+        const a = d.data();
+        return `<tr><td>${a.date||'—'}</td><td>${a.time||'—'}</td><td>${a.purpose||'—'}</td><td>${a.location||'—'}</td></tr>`;
+      }).join('');
+    });
+  }
+
+  // Vitals — realtime (cards + history table)
+  const vitalsGrid = $('vitalsGrid');
+  const vitalsTableBody = $('vitalsTableBody');
+  if (vitalsGrid || vitalsTableBody) {
+    onSnapshot(query(collection(db, 'vitals'), where('patientId', '==', user.uid), orderBy('date','desc')), snap => {
+      if($('statVitals')) $('statVitals').textContent = snap.size;
+
+      // Latest vitals cards
+      if (vitalsGrid) {
+        if (snap.empty) { vitalsGrid.innerHTML = '<div class="empty-state"><div class="empty-icon">❤️</div><p>No vitals recorded yet.</p></div>'; }
+        else {
+          const latest = snap.docs[0].data();
+          vitalsGrid.innerHTML = `
+            <div class="vital-card"><div class="vital-label">Blood Pressure</div><div class="vital-value">${latest.bp||'—'}</div><div class="vital-unit">mmHg</div></div>
+            <div class="vital-card"><div class="vital-label">Heart Rate</div><div class="vital-value">${latest.hr||'—'}</div><div class="vital-unit">bpm</div></div>
+            <div class="vital-card"><div class="vital-label">Temperature</div><div class="vital-value">${latest.temp||'—'}</div><div class="vital-unit">°C</div></div>
+            <div class="vital-card"><div class="vital-label">Weight</div><div class="vital-value">${latest.weight||'—'}</div><div class="vital-unit">kg</div></div>
+          `;
+        }
+      }
+
+      // Full vitals history table
+      if (vitalsTableBody) {
+        if (snap.empty) { vitalsTableBody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">❤️</div><p>No vitals recorded yet.</p></div></td></tr>'; }
+        else {
+          vitalsTableBody.innerHTML = snap.docs.map(d => {
+            const v = d.data();
+            return `<tr><td>${v.date||'—'}</td><td>${v.bp||'—'}</td><td>${v.hr||'—'} bpm</td><td>${v.temp||'—'} °C</td><td>${v.weight||'—'} kg</td></tr>`;
+          }).join('');
+        }
+      }
+    });
+  }
+
+  // Nursing notes — realtime
+  const notesBody = $('notesBody');
+  if (notesBody) {
+    onSnapshot(query(collection(db, 'nursingNotes'), where('patientId', '==', user.uid), orderBy('date','desc')), snap => {
+      if (snap.empty) { notesBody.innerHTML = '<tr><td colspan="2"><div class="empty-state"><div class="empty-icon">📝</div><p>No nursing notes.</p></div></td></tr>'; return; }
+      notesBody.innerHTML = snap.docs.map(d => {
+        const n = d.data();
+        return `<tr><td>${n.date||'—'}</td><td>${n.note||'—'}</td></tr>`;
+      }).join('');
+    });
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   ROUTER
+   ══════════════════════════════════════════════════════════ */
+switch (page) {
+  case 'admin-login.html':
+    initTheme();
+    handleLogin('admin', 'admin-dashboard.html');
+    break;
+  case 'doctor-login.html':
+    initTheme();
+    handleLogin('doctor', 'doctor-dashboard.html');
+    break;
+  case 'nurse-login.html':
+    initTheme();
+    handleLogin('nurse', 'nurse-dashboard.html');
+    break;
+  case 'patient-login.html':
+    initTheme();
+    handleLogin('patient', 'patient-dashboard.html');
+    break;
+
+  case 'admin-dashboard.html':
+    initAdminDashboard();
+    break;
+  case 'doctor-dashboard.html':
+    initDoctorDashboard();
+    break;
+  case 'nurse-dashboard.html':
+    initNurseDashboard();
+    break;
+  case 'patient-dashboard.html':
+    initPatientDashboard();
+    break;
+
+  default:
+    initTheme();
 }

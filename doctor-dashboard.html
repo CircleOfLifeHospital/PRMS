@@ -9,84 +9,192 @@
 </head>
 <body>
 <div class="dashboard-layout">
+
+  <!-- SIDEBAR -->
   <aside class="sidebar">
-    <a href="index.html" class="sidebar-logo"><div class="logo-icon">🏥</div><div class="logo-text">Circle of <span>Life</span></div></a>
+    <a href="index.html" class="sidebar-logo">
+      <div class="logo-icon">🏥</div>
+      <div class="logo-text">Circle of <span>Life</span></div>
+    </a>
     <div class="sidebar-user">
-      <div class="user-avatar" style="background:rgba(26,35,126,0.15);color:#3949AB;" id="userAvatar">D</div>
+      <div class="user-avatar" style="background:rgba(26,35,126,0.15);color:#1A237E;" id="userAvatar">D</div>
       <div class="user-name" id="userName">Loading…</div>
       <div class="user-role">Doctor</div>
     </div>
     <nav class="sidebar-nav">
       <div class="sidebar-section-label">Clinical</div>
-      <a href="#patients" class="active"><span class="nav-icon">🧑‍⚕️</span> Patients</a>
-      <a href="#records-table"><span class="nav-icon">📋</span> All Records</a>
-      <a href="#diagnosis-form"><span class="nav-icon">🔬</span> Add Diagnosis</a>
-      <a href="#prescription-form"><span class="nav-icon">💊</span> Prescribe</a>
+      <a href="#" data-tab-link="tab-patients" class="active"><span class="nav-icon">🧑‍⚕️</span> Patients</a>
+      <a href="#" data-tab-link="tab-records"><span class="nav-icon">📋</span> Medical Records</a>
+      <a href="#" data-tab-link="tab-diagnosis"><span class="nav-icon">🔬</span> Add Diagnosis</a>
+      <a href="#" data-tab-link="tab-prescriptions"><span class="nav-icon">💊</span> Prescriptions</a>
+      <a href="#" data-tab-link="tab-appointments"><span class="nav-icon">📅</span> Appointments</a>
     </nav>
+    <div class="role-switcher">
+      <div class="role-switcher-label">Switch Dashboard</div>
+      <a href="admin-dashboard.html"><span class="nav-icon">🛡️</span> Admin</a>
+      <a href="nurse-dashboard.html"><span class="nav-icon">💉</span> Nurse</a>
+      <a href="patient-dashboard.html"><span class="nav-icon">🧑‍⚕️</span> Patient</a>
+    </div>
     <div class="sidebar-footer">
       <button class="sidebar-theme-btn" id="themeToggle">🌙 <span id="themeLabel">Dark Mode</span></button>
       <button id="logoutBtn">🚪 Sign Out</button>
     </div>
   </aside>
+
+  <!-- MAIN -->
   <main class="main-content">
     <div class="main-header">
       <h1>Doctor Dashboard</h1>
-      <p id="headerSub">Clinical records, diagnoses, and prescriptions.</p>
+      <p>Clinical records, diagnoses, and prescriptions.</p>
     </div>
-    <div class="content-body">
-      <div class="section-card" id="patients">
+
+    <!-- TAB NAV -->
+    <div class="tab-nav">
+      <a href="#" data-tab="tab-patients" class="active">🧑‍⚕️ Patients</a>
+      <a href="#" data-tab="tab-records">📋 Records</a>
+      <a href="#" data-tab="tab-diagnosis">🔬 Add Diagnosis</a>
+      <a href="#" data-tab="tab-prescriptions">💊 Prescriptions</a>
+      <a href="#" data-tab="tab-appointments">📅 Appointments</a>
+    </div>
+
+    <!-- PATIENTS -->
+    <div class="tab-panel active" id="tab-patients">
+      <div class="section-card">
         <div class="section-header">
           <h2>🧑‍⚕️ All Patients</h2>
           <input class="search-input" id="patientSearch" type="text" placeholder="Search patients…"/>
         </div>
         <div class="section-body table-wrap">
-          <table><thead><tr><th>Patient ID</th><th>Name</th><th>DOB</th><th>Medicare No.</th><th>Contact</th></tr></thead>
-          <tbody id="patientsBody"><tr><td colspan="5"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody></table>
+          <table>
+            <thead><tr><th>Patient UID</th><th>Name</th><th>DOB</th><th>Medicare No.</th><th>Contact</th></tr></thead>
+            <tbody id="patientsBody"><tr><td colspan="5"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody>
+          </table>
         </div>
       </div>
-      <div class="section-card" id="records-table">
+    </div>
+
+    <!-- RECORDS (diagnosis history) -->
+    <div class="tab-panel" id="tab-records">
+      <div class="section-card">
         <div class="section-header">
-          <h2>📋 All Medical Records</h2>
+          <h2>📋 Medical Records & Diagnoses</h2>
           <input class="search-input" id="recordSearch" type="text" placeholder="Search records…"/>
         </div>
         <div class="section-body table-wrap">
-          <table><thead><tr><th>Patient ID</th><th>Date</th><th>Diagnosis</th><th>Treatment</th><th>Notes</th></tr></thead>
-          <tbody id="recordsBody"><tr><td colspan="5"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody></table>
+          <table>
+            <thead><tr><th>Patient UID</th><th>Patient Name</th><th>Date</th><th>Diagnosis</th><th>Treatment</th><th>Notes</th></tr></thead>
+            <tbody id="recordsBody"><tr><td colspan="6"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody>
+          </table>
         </div>
       </div>
-      <div class="section-card" id="diagnosis-form">
+    </div>
+
+    <!-- ADD DIAGNOSIS -->
+    <div class="tab-panel" id="tab-diagnosis">
+      <div class="section-card">
         <div class="section-header"><h2>🔬 Add Diagnosis / Record</h2></div>
         <div class="section-body">
           <div class="form-grid">
-            <div class="form-group"><label for="dPatientId">Patient ID</label><input type="text" id="dPatientId" placeholder="e.g. P-00123"/></div>
+            <div class="form-group"><label for="dPatientId">Patient UID</label><input type="text" id="dPatientId" placeholder="Paste patient UID…"/></div>
             <div class="form-group"><label for="dDate">Date</label><input type="date" id="dDate"/></div>
             <div class="form-group"><label for="dDiagnosis">Diagnosis</label><input type="text" id="dDiagnosis" placeholder="e.g. Hypertension"/></div>
             <div class="form-group"><label for="dTreatment">Treatment</label><input type="text" id="dTreatment" placeholder="e.g. Lifestyle changes"/></div>
           </div>
           <div class="form-group"><label for="dNotes">Clinical Notes</label><textarea id="dNotes" placeholder="Additional observations…"></textarea></div>
           <button class="btn doctor" id="saveDiagnosisBtn">💾 Save Record</button>
-          <p class="success-msg" id="diagnosisSuccess">✅ Record saved successfully.</p>
+          <p class="success-msg" id="diagnosisSuccess">✅ Diagnosis record saved.</p>
           <p class="error-msg" id="diagnosisError"></p>
         </div>
       </div>
-      <div class="section-card" id="prescription-form">
+    </div>
+
+    <!-- PRESCRIPTIONS -->
+    <div class="tab-panel" id="tab-prescriptions">
+      <div class="section-card">
+        <div class="section-header">
+          <h2>💊 All Prescriptions</h2>
+          <input class="search-input" id="presSearch" type="text" placeholder="Search prescriptions…"/>
+        </div>
+        <div class="section-body table-wrap">
+          <table>
+            <thead><tr><th>Patient UID</th><th>Patient Name</th><th>Medication</th><th>Dosage</th><th>Frequency</th><th>Start Date</th></tr></thead>
+            <tbody id="prescriptionsBody"><tr><td colspan="6"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="section-card">
         <div class="section-header"><h2>💊 Prescribe Medication</h2></div>
         <div class="section-body">
           <div class="form-grid">
-            <div class="form-group"><label for="pPatientId">Patient ID</label><input type="text" id="pPatientId" placeholder="e.g. P-00123"/></div>
+            <div class="form-group"><label for="pPatientId">Patient UID</label><input type="text" id="pPatientId" placeholder="Paste patient UID…"/></div>
             <div class="form-group"><label for="pMedName">Medication Name</label><input type="text" id="pMedName" placeholder="e.g. Metformin"/></div>
             <div class="form-group"><label for="pDosage">Dosage</label><input type="text" id="pDosage" placeholder="e.g. 500mg"/></div>
             <div class="form-group"><label for="pFrequency">Frequency</label><input type="text" id="pFrequency" placeholder="e.g. Twice daily"/></div>
             <div class="form-group"><label for="pStartDate">Start Date</label><input type="date" id="pStartDate"/></div>
           </div>
           <button class="btn doctor" id="savePrescriptionBtn">💾 Save Prescription</button>
-          <p class="success-msg" id="prescriptionSuccess">✅ Prescription saved successfully.</p>
+          <p class="success-msg" id="prescriptionSuccess">✅ Prescription saved and pushed to patient in real time.</p>
           <p class="error-msg" id="prescriptionError"></p>
         </div>
       </div>
     </div>
+
+    <!-- APPOINTMENTS -->
+    <div class="tab-panel" id="tab-appointments">
+      <div class="section-card">
+        <div class="section-header"><h2>📅 All Appointments</h2></div>
+        <div class="section-body table-wrap">
+          <table>
+            <thead><tr><th>Patient Name</th><th>Date</th><th>Time</th><th>Purpose</th><th>Status</th></tr></thead>
+            <tbody id="apptBody"><tr><td colspan="5"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="section-card">
+        <div class="section-header"><h2>📅 Schedule Appointment</h2></div>
+        <div class="section-body">
+          <div class="form-grid">
+            <div class="form-group"><label for="aPatientId">Patient UID</label><input type="text" id="aPatientId" placeholder="Paste patient UID…"/></div>
+            <div class="form-group"><label for="aDate">Date</label><input type="date" id="aDate"/></div>
+            <div class="form-group"><label for="aTime">Time</label><input type="time" id="aTime"/></div>
+            <div class="form-group"><label for="aPurpose">Purpose</label><input type="text" id="aPurpose" placeholder="e.g. Follow-up, Review"/></div>
+            <div class="form-group"><label for="aLocation">Location</label><input type="text" id="aLocation" placeholder="e.g. Room 3, Main Clinic"/></div>
+          </div>
+          <button class="btn doctor" id="saveApptBtn">📅 Schedule Appointment</button>
+          <p class="success-msg" id="apptSuccess">✅ Appointment scheduled and visible to patient.</p>
+          <p class="error-msg" id="apptError"></p>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 <script type="module" src="./script.js"></script>
+<script>
+  document.querySelectorAll('[data-tab-link]').forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      const tabId = link.dataset.tabLink;
+      document.querySelectorAll('.tab-nav a,.tab-panel,[data-tab-link]').forEach(el => el.classList.remove('active'));
+      link.classList.add('active');
+      const tabLink = document.querySelector(`.tab-nav a[data-tab="${tabId}"]`);
+      if (tabLink) tabLink.classList.add('active');
+      const panel = document.getElementById(tabId);
+      if (panel) panel.classList.add('active');
+    });
+  });
+  document.querySelectorAll('.tab-nav a[data-tab]').forEach(tab => {
+    tab.addEventListener('click', e => {
+      e.preventDefault();
+      const tabId = tab.dataset.tab;
+      document.querySelectorAll('.tab-nav a,.tab-panel,[data-tab-link]').forEach(el => el.classList.remove('active'));
+      tab.classList.add('active');
+      const sideLink = document.querySelector(`[data-tab-link="${tabId}"]`);
+      if (sideLink) sideLink.classList.add('active');
+      const panel = document.getElementById(tabId);
+      if (panel) panel.classList.add('active');
+    });
+  });
+</script>
 </body>
 </html>
