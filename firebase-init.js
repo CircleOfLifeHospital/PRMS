@@ -19,13 +19,11 @@ export {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
-  createUserWithEmailAndPassword,
-  GoogleAuthProvider,
-  signInWithPopup
+  createUserWithEmailAndPassword
 } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
 
 export {
   collection, addDoc, getDocs, getDoc,
   query, where, orderBy, serverTimestamp,
-  doc, updateDoc, deleteDoc, onSnapshot, setDoc
+  doc, updateDoc, deleteDoc, onSnapshot
 } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';

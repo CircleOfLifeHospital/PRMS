@@ -6,173 +6,88 @@
   <title>Patient Dashboard — Circle of Life Hospital</title>
   <link rel="stylesheet" href="style.css"/>
   <script>const t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t);</script>
+  <style>
+    .vitals-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;}
+    .vital-card{background:var(--bg);border-radius:10px;padding:14px;border:1px solid var(--border);text-align:center;}
+    .vital-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:6px;}
+    .vital-value{font-size:1.3rem;font-weight:800;color:#2196F3;}
+    .vital-unit{font-size:.72rem;color:var(--text-muted);margin-top:2px;}
+  </style>
 </head>
 <body>
 <div class="dashboard-layout">
-
-  <!-- SIDEBAR -->
   <aside class="sidebar">
-    <a href="index.html" class="sidebar-logo">
-      <div class="logo-icon">🏥</div>
-      <div class="logo-text">Circle of <span>Life</span></div>
-    </a>
+    <a href="index.html" class="sidebar-logo"><div class="logo-icon">🏥</div><div class="logo-text">Circle of <span>Life</span></div></a>
     <div class="sidebar-user">
-      <div class="user-avatar" style="background:rgba(21,101,192,0.15);color:#1565C0;" id="userAvatar">P</div>
+      <div class="user-avatar" style="background:rgba(33,150,243,0.15);color:#2196F3;" id="userAvatar">P</div>
       <div class="user-name" id="userName">Loading…</div>
       <div class="user-role">Patient</div>
     </div>
     <nav class="sidebar-nav">
       <div class="sidebar-section-label">My Health</div>
-      <a href="#" data-tab-link="tab-overview" class="active"><span class="nav-icon">🏠</span> Overview</a>
-      <a href="#" data-tab-link="tab-details"><span class="nav-icon">👤</span> Personal Details</a>
-      <a href="#" data-tab-link="tab-records"><span class="nav-icon">📋</span> Medical Records</a>
-      <a href="#" data-tab-link="tab-vitals"><span class="nav-icon">❤️</span> Vitals</a>
-      <a href="#" data-tab-link="tab-appointments"><span class="nav-icon">📅</span> Appointments</a>
-      <a href="#" data-tab-link="tab-medications"><span class="nav-icon">💊</span> Medications</a>
-      <a href="#" data-tab-link="tab-notes"><span class="nav-icon">📝</span> Nursing Notes</a>
+      <a href="#overview" class="active"><span class="nav-icon">🏠</span> Overview</a>
+      <a href="#details"><span class="nav-icon">👤</span> Personal Details</a>
+      <a href="#records"><span class="nav-icon">📋</span> Medical Records</a>
+      <a href="#vitals"><span class="nav-icon">❤️</span> Vitals</a>
+      <a href="#appointments"><span class="nav-icon">📅</span> Appointments</a>
+      <a href="#medications"><span class="nav-icon">💊</span> Medications</a>
     </nav>
     <div class="sidebar-footer">
       <button class="sidebar-theme-btn" id="themeToggle">🌙 <span id="themeLabel">Dark Mode</span></button>
       <button id="logoutBtn">🚪 Sign Out</button>
     </div>
   </aside>
-
-  <!-- MAIN -->
   <main class="main-content">
     <div class="main-header">
       <h1>Patient Dashboard</h1>
-      <p>Welcome back — here's your health summary.</p>
+      <p id="headerSub">Welcome back — here's your health summary.</p>
     </div>
-
-    <!-- TAB NAV -->
-    <div class="tab-nav">
-      <a href="#" data-tab="tab-overview" class="active">🏠 Overview</a>
-      <a href="#" data-tab="tab-details">👤 Details</a>
-      <a href="#" data-tab="tab-records">📋 Records</a>
-      <a href="#" data-tab="tab-vitals">❤️ Vitals</a>
-      <a href="#" data-tab="tab-appointments">📅 Appointments</a>
-      <a href="#" data-tab="tab-medications">💊 Medications</a>
-      <a href="#" data-tab="tab-notes">📝 Notes</a>
-    </div>
-
-    <!-- OVERVIEW -->
-    <div class="tab-panel active" id="tab-overview">
-      <div class="stats-grid">
+    <div class="content-body">
+      <div class="stats-grid patient" id="overview">
         <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-label">Medical Records</div><div class="stat-value" id="statRecords">—</div></div>
         <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-label">Appointments</div><div class="stat-value" id="statAppts">—</div></div>
         <div class="stat-card"><div class="stat-icon">💊</div><div class="stat-label">Medications</div><div class="stat-value" id="statMeds">—</div></div>
         <div class="stat-card"><div class="stat-icon">❤️</div><div class="stat-label">Vitals Recorded</div><div class="stat-value" id="statVitals">—</div></div>
       </div>
-      <!-- Latest vitals preview on overview -->
-      <div class="section-card">
+      <div class="section-card" id="details">
+        <div class="section-header"><h2>👤 Personal Details</h2></div>
+        <div class="section-body"><div class="info-grid" id="personalGrid"><div class="loading"><div class="spinner"></div> Loading…</div></div></div>
+      </div>
+      <div class="section-card" id="vitals">
         <div class="section-header"><h2>❤️ Latest Vitals</h2></div>
         <div class="section-body"><div class="vitals-grid" id="vitalsGrid"><div class="loading"><div class="spinner"></div> Loading…</div></div></div>
       </div>
-    </div>
-
-    <!-- PERSONAL DETAILS -->
-    <div class="tab-panel" id="tab-details">
-      <div class="section-card">
-        <div class="section-header"><h2>👤 Personal Details</h2></div>
-        <div class="section-body">
-          <div class="info-grid" id="personalGrid"><div class="loading"><div class="spinner"></div> Loading…</div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- MEDICAL RECORDS -->
-    <div class="tab-panel" id="tab-records">
-      <div class="section-card">
-        <div class="section-header"><h2>📋 Medical Records &amp; Diagnoses</h2></div>
+      <div class="section-card" id="records">
+        <div class="section-header"><h2>📋 Medical Records</h2></div>
         <div class="section-body table-wrap">
-          <table>
-            <thead><tr><th>Date</th><th>Diagnosis</th><th>Treatment</th><th>Notes</th></tr></thead>
-            <tbody id="recordsBody"><tr><td colspan="4"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody>
-          </table>
+          <table><thead><tr><th>Date</th><th>Diagnosis</th><th>Treatment</th><th>Notes</th></tr></thead>
+          <tbody id="recordsBody"><tr><td colspan="4"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody></table>
         </div>
       </div>
-    </div>
-
-    <!-- VITALS -->
-    <div class="tab-panel" id="tab-vitals">
-      <div class="section-card">
-        <div class="section-header"><h2>❤️ Vitals History</h2></div>
+      <div class="section-card" id="appointments">
+        <div class="section-header"><h2>📅 Appointments</h2></div>
         <div class="section-body table-wrap">
-          <table>
-            <thead><tr><th>Date</th><th>Blood Pressure</th><th>Heart Rate</th><th>Temperature</th><th>Weight</th></tr></thead>
-            <tbody id="vitalsTableBody"><tr><td colspan="5"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody>
-          </table>
+          <table><thead><tr><th>Date</th><th>Time</th><th>Purpose</th><th>Location</th></tr></thead>
+          <tbody id="appointmentsBody"><tr><td colspan="4"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody></table>
         </div>
       </div>
-    </div>
-
-    <!-- APPOINTMENTS -->
-    <div class="tab-panel" id="tab-appointments">
-      <div class="section-card">
-        <div class="section-header"><h2>📅 My Appointments</h2></div>
+      <div class="section-card" id="medications">
+        <div class="section-header"><h2>💊 Medications</h2></div>
         <div class="section-body table-wrap">
-          <table>
-            <thead><tr><th>Date</th><th>Time</th><th>Purpose</th><th>Location</th></tr></thead>
-            <tbody id="appointmentsBody"><tr><td colspan="4"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody>
-          </table>
+          <table><thead><tr><th>Medication</th><th>Dosage</th><th>Frequency</th><th>Start Date</th></tr></thead>
+          <tbody id="medsBody"><tr><td colspan="4"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody></table>
         </div>
       </div>
-    </div>
-
-    <!-- MEDICATIONS -->
-    <div class="tab-panel" id="tab-medications">
-      <div class="section-card">
-        <div class="section-header"><h2>💊 My Medications</h2></div>
-        <div class="section-body table-wrap">
-          <table>
-            <thead><tr><th>Medication</th><th>Dosage</th><th>Frequency</th><th>Start Date</th></tr></thead>
-            <tbody id="medsBody"><tr><td colspan="4"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- NURSING NOTES -->
-    <div class="tab-panel" id="tab-notes">
       <div class="section-card">
         <div class="section-header"><h2>📝 Nursing Notes</h2></div>
         <div class="section-body table-wrap">
-          <table>
-            <thead><tr><th>Date</th><th>Note</th></tr></thead>
-            <tbody id="notesBody"><tr><td colspan="2"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody>
-          </table>
+          <table><thead><tr><th>Date</th><th>Note</th></tr></thead>
+          <tbody id="notesBody"><tr><td colspan="2"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody></table>
         </div>
       </div>
     </div>
-
   </main>
 </div>
 <script type="module" src="./script.js"></script>
-<script>
-  document.querySelectorAll('[data-tab-link]').forEach(link => {
-    link.addEventListener('click', e => {
-      e.preventDefault();
-      const tabId = link.dataset.tabLink;
-      document.querySelectorAll('.tab-nav a,.tab-panel,[data-tab-link]').forEach(el => el.classList.remove('active'));
-      link.classList.add('active');
-      const tabLink = document.querySelector(`.tab-nav a[data-tab="${tabId}"]`);
-      if (tabLink) tabLink.classList.add('active');
-      const panel = document.getElementById(tabId);
-      if (panel) panel.classList.add('active');
-    });
-  });
-  document.querySelectorAll('.tab-nav a[data-tab]').forEach(tab => {
-    tab.addEventListener('click', e => {
-      e.preventDefault();
-      const tabId = tab.dataset.tab;
-      document.querySelectorAll('.tab-nav a,.tab-panel,[data-tab-link]').forEach(el => el.classList.remove('active'));
-      tab.classList.add('active');
-      const sideLink = document.querySelector(`[data-tab-link="${tabId}"]`);
-      if (sideLink) sideLink.classList.add('active');
-      const panel = document.getElementById(tabId);
-      if (panel) panel.classList.add('active');
-    });
-  });
-</script>
 </body>
 </html>

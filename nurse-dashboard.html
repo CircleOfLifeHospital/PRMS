@@ -9,146 +9,79 @@
 </head>
 <body>
 <div class="dashboard-layout">
-
-  <!-- SIDEBAR -->
   <aside class="sidebar">
-    <a href="index.html" class="sidebar-logo">
-      <div class="logo-icon">🏥</div>
-      <div class="logo-text">Circle of <span>Life</span></div>
-    </a>
+    <a href="index.html" class="sidebar-logo"><div class="logo-icon">🏥</div><div class="logo-text">Circle of <span>Life</span></div></a>
     <div class="sidebar-user">
-      <div class="user-avatar" style="background:rgba(0,105,92,0.15);color:#00695C;" id="userAvatar">N</div>
+      <div class="user-avatar" style="background:rgba(0,150,136,0.15);color:#009688;" id="userAvatar">N</div>
       <div class="user-name" id="userName">Loading…</div>
       <div class="user-role">Nurse</div>
     </div>
     <nav class="sidebar-nav">
       <div class="sidebar-section-label">Nursing</div>
-      <a href="#" data-tab-link="tab-patients" class="active"><span class="nav-icon">🧑‍⚕️</span> Patients</a>
-      <a href="#" data-tab-link="tab-vitals"><span class="nav-icon">❤️</span> Record Vitals</a>
-      <a href="#" data-tab-link="tab-notes"><span class="nav-icon">📝</span> Nursing Notes</a>
-      <a href="#" data-tab-link="tab-log"><span class="nav-icon">📊</span> Vitals Log</a>
+      <a href="#patients" class="active"><span class="nav-icon">🧑‍⚕️</span> Patients</a>
+      <a href="#vitals-form"><span class="nav-icon">❤️</span> Record Vitals</a>
+      <a href="#notes-form"><span class="nav-icon">📝</span> Nursing Notes</a>
     </nav>
-    <div class="role-switcher">
-      <div class="role-switcher-label">Switch Dashboard</div>
-      <a href="admin-dashboard.html"><span class="nav-icon">🛡️</span> Admin</a>
-      <a href="doctor-dashboard.html"><span class="nav-icon">👨‍⚕️</span> Doctor</a>
-      <a href="patient-dashboard.html"><span class="nav-icon">🧑‍⚕️</span> Patient</a>
-    </div>
     <div class="sidebar-footer">
       <button class="sidebar-theme-btn" id="themeToggle">🌙 <span id="themeLabel">Dark Mode</span></button>
       <button id="logoutBtn">🚪 Sign Out</button>
     </div>
   </aside>
-
-  <!-- MAIN -->
   <main class="main-content">
     <div class="main-header">
       <h1>Nurse Dashboard</h1>
-      <p>Manage patient vitals and nursing notes.</p>
+      <p id="headerSub">Manage patient vitals and nursing notes.</p>
     </div>
-
-    <!-- TAB NAV -->
-    <div class="tab-nav">
-      <a href="#" data-tab="tab-patients" class="active">🧑‍⚕️ Patients</a>
-      <a href="#" data-tab="tab-vitals">❤️ Record Vitals</a>
-      <a href="#" data-tab="tab-notes">📝 Nursing Notes</a>
-      <a href="#" data-tab="tab-log">📊 Vitals Log</a>
-    </div>
-
-    <!-- PATIENTS -->
-    <div class="tab-panel active" id="tab-patients">
-      <div class="section-card">
+    <div class="content-body">
+      <div class="section-card" id="patients">
         <div class="section-header">
           <h2>🧑‍⚕️ All Patients</h2>
           <input class="search-input" id="patientSearch" type="text" placeholder="Search patients…"/>
         </div>
         <div class="section-body table-wrap">
-          <table>
-            <thead><tr><th>Patient UID</th><th>Name</th><th>DOB</th><th>Medicare No.</th><th>Contact</th><th>Address</th></tr></thead>
-            <tbody id="patientsBody"><tr><td colspan="6"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody>
-          </table>
+          <table><thead><tr><th>Patient ID</th><th>Name</th><th>DOB</th><th>Medicare No.</th><th>Contact</th><th>Address</th></tr></thead>
+          <tbody id="patientsBody"><tr><td colspan="6"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody></table>
         </div>
       </div>
-    </div>
-
-    <!-- RECORD VITALS -->
-    <div class="tab-panel" id="tab-vitals">
-      <div class="section-card">
+      <div class="section-card" id="vitals-form">
         <div class="section-header"><h2>❤️ Record Vitals</h2></div>
         <div class="section-body">
           <div class="form-grid">
-            <div class="form-group"><label for="vPatientId">Patient UID</label><input type="text" id="vPatientId" placeholder="Paste patient UID…"/></div>
+            <div class="form-group"><label for="vPatientId">Patient ID</label><input type="text" id="vPatientId" placeholder="e.g. P-00123"/></div>
             <div class="form-group"><label for="vDate">Date</label><input type="date" id="vDate"/></div>
             <div class="form-group"><label for="vBP">Blood Pressure (mmHg)</label><input type="text" id="vBP" placeholder="e.g. 120/80"/></div>
             <div class="form-group"><label for="vHR">Heart Rate (bpm)</label><input type="number" id="vHR" placeholder="e.g. 72"/></div>
             <div class="form-group"><label for="vTemp">Temperature (°C)</label><input type="number" id="vTemp" step="0.1" placeholder="e.g. 36.8"/></div>
             <div class="form-group"><label for="vWeight">Weight (kg)</label><input type="number" id="vWeight" step="0.1" placeholder="e.g. 75.5"/></div>
           </div>
-          <button class="btn nurse" id="saveVitalsBtn">💾 Save Vitals</button>
-          <p class="success-msg" id="vitalsSuccess">✅ Vitals recorded and pushed to patient in real time.</p>
+          <button class="btn nurse" id="saveVitalsBtn" style="margin-top:8px;">💾 Save Vitals</button>
+          <p class="success-msg" id="vitalsSuccess">✅ Vitals recorded successfully.</p>
           <p class="error-msg" id="vitalsError"></p>
         </div>
       </div>
-    </div>
-
-    <!-- NURSING NOTES -->
-    <div class="tab-panel" id="tab-notes">
-      <div class="section-card">
+      <div class="section-card" id="notes-form">
         <div class="section-header"><h2>📝 Add Nursing Note</h2></div>
         <div class="section-body">
           <div class="form-grid">
-            <div class="form-group"><label for="nPatientId">Patient UID</label><input type="text" id="nPatientId" placeholder="Paste patient UID…"/></div>
+            <div class="form-group"><label for="nPatientId">Patient ID</label><input type="text" id="nPatientId" placeholder="e.g. P-00123"/></div>
             <div class="form-group"><label for="nDate">Date</label><input type="date" id="nDate"/></div>
           </div>
           <div class="form-group"><label for="nNote">Note</label><textarea id="nNote" placeholder="Enter nursing observation or note…"></textarea></div>
           <button class="btn nurse" id="saveNoteBtn">💾 Save Note</button>
-          <p class="success-msg" id="noteSuccess">✅ Note saved.</p>
+          <p class="success-msg" id="noteSuccess">✅ Note saved successfully.</p>
           <p class="error-msg" id="noteError"></p>
         </div>
       </div>
-    </div>
-
-    <!-- VITALS LOG -->
-    <div class="tab-panel" id="tab-log">
       <div class="section-card">
-        <div class="section-header"><h2>📊 Vitals Log</h2></div>
+        <div class="section-header"><h2>📊 Recent Vitals Log</h2></div>
         <div class="section-body table-wrap">
-          <table>
-            <thead><tr><th>Patient Name</th><th>Date</th><th>BP</th><th>HR</th><th>Temp</th><th>Weight</th></tr></thead>
-            <tbody id="vitalsLogBody"><tr><td colspan="6"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody>
-          </table>
+          <table><thead><tr><th>Patient ID</th><th>Date</th><th>BP</th><th>HR</th><th>Temp</th><th>Weight</th></tr></thead>
+          <tbody id="vitalsLogBody"><tr><td colspan="6"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody></table>
         </div>
       </div>
     </div>
-
   </main>
 </div>
 <script type="module" src="./script.js"></script>
-<script>
-  document.querySelectorAll('[data-tab-link]').forEach(link => {
-    link.addEventListener('click', e => {
-      e.preventDefault();
-      const tabId = link.dataset.tabLink;
-      document.querySelectorAll('.tab-nav a,.tab-panel,[data-tab-link]').forEach(el => el.classList.remove('active'));
-      link.classList.add('active');
-      const tabLink = document.querySelector(`.tab-nav a[data-tab="${tabId}"]`);
-      if (tabLink) tabLink.classList.add('active');
-      const panel = document.getElementById(tabId);
-      if (panel) panel.classList.add('active');
-    });
-  });
-  document.querySelectorAll('.tab-nav a[data-tab]').forEach(tab => {
-    tab.addEventListener('click', e => {
-      e.preventDefault();
-      const tabId = tab.dataset.tab;
-      document.querySelectorAll('.tab-nav a,.tab-panel,[data-tab-link]').forEach(el => el.classList.remove('active'));
-      tab.classList.add('active');
-      const sideLink = document.querySelector(`[data-tab-link="${tabId}"]`);
-      if (sideLink) sideLink.classList.add('active');
-      const panel = document.getElementById(tabId);
-      if (panel) panel.classList.add('active');
-    });
-  });
-</script>
 </body>
 </html>
