@@ -6,13 +6,11 @@ import {
   doc, updateDoc, deleteDoc, onSnapshot
 } from './firebase-init.js';
 
-// ─── Page detection ───────────────────────────────────────────────────────────
 const PAGE = window.location.pathname.split('/').pop() || 'index.html';
 
 const LOGIN_PAGES     = ['patient-login.html','nurse-login.html','doctor-login.html','admin-login.html'];
 const DASHBOARD_PAGES = ['patient-dashboard.html','nurse-dashboard.html','doctor-dashboard.html','admin-dashboard.html'];
 
-// ─── Theme ────────────────────────────────────────────────────────────────────
 function initTheme() {
   const toggle = document.getElementById('themeToggle');
   const label  = document.getElementById('themeLabel');
@@ -20,9 +18,9 @@ function initTheme() {
   const apply = t => {
     document.documentElement.setAttribute('data-theme', t);
     localStorage.setItem('theme', t);
-    if (toggle.tagName === 'BUTTON' && !label) toggle.textContent = t === 'dark' ? '☀️' : '🌙';
+    if (toggle.tagName === 'BUTTON' && !label) toggle.textContent = t === 'dark' ? 'light mode' : 'dark mode';
     if (label) label.textContent = t === 'dark' ? 'Light Mode' : 'Dark Mode';
-    if (toggle.tagName === 'BUTTON' && label) toggle.firstChild.textContent = t === 'dark' ? '☀️ ' : '🌙 ';
+    if (toggle.tagName === 'BUTTON' && label) toggle.firstChild.textContent = t === 'dark' ? 'light mode ' : 'dark mode ';
   };
   apply(localStorage.getItem('theme') || 'light');
   toggle.addEventListener('click', () =>
@@ -30,7 +28,7 @@ function initTheme() {
   );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 const $   = id => document.getElementById(id);
 const val = id => { const e = $(id); return e ? e.value.trim() : ''; };
 const setText = (id, t) => { const e = $(id); if (e) e.textContent = t; };

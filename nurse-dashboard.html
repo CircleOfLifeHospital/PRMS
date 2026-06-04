@@ -3,28 +3,28 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Nurse Dashboard — Circle of Life Hospital</title>
+  <title>Nurse Dashboard - Circle of Life Hospital</title>
   <link rel="stylesheet" href="style.css"/>
   <script>const t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t);</script>
 </head>
 <body>
 <div class="dashboard-layout">
   <aside class="sidebar">
-    <a href="index.html" class="sidebar-logo"><div class="logo-icon">🏥</div><div class="logo-text">Circle of <span>Life</span></div></a>
+    <a href="index.html" class="sidebar-logo"><div class="logo-icon"></div><div class="logo-text">Circle of <span>Life</span></div></a>
     <div class="sidebar-user">
       <div class="user-avatar" style="background:rgba(0,150,136,0.15);color:#009688;" id="userAvatar">N</div>
-      <div class="user-name" id="userName">Loading…</div>
+      <div class="user-name" id="userName">Loading...</div>
       <div class="user-role">Nurse</div>
     </div>
     <nav class="sidebar-nav">
       <div class="sidebar-section-label">Nursing</div>
-      <a href="#patients" class="active"><span class="nav-icon">🧑‍⚕️</span> Patients</a>
-      <a href="#vitals-form"><span class="nav-icon">❤️</span> Record Vitals</a>
-      <a href="#notes-form"><span class="nav-icon">📝</span> Nursing Notes</a>
+      <a href="#patients" class="active"><span class="nav-icon"></span> Patients</a>
+      <a href="#vitals-form"><span class="nav-icon"></span> Record Vitals</a>
+      <a href="#notes-form"><span class="nav-icon"></span> Nursing Notes</a>
     </nav>
     <div class="sidebar-footer">
-      <button class="sidebar-theme-btn" id="themeToggle">🌙 <span id="themeLabel">Dark Mode</span></button>
-      <button id="logoutBtn">🚪 Sign Out</button>
+      <button class="sidebar-theme-btn" id="themeToggle"><span id="themeLabel">Dark Mode</span></button>
+      <button id="logoutBtn"> Sign Out</button>
     </div>
   </aside>
   <main class="main-content">
@@ -35,16 +35,16 @@
     <div class="content-body">
       <div class="section-card" id="patients">
         <div class="section-header">
-          <h2>🧑‍⚕️ All Patients</h2>
-          <input class="search-input" id="patientSearch" type="text" placeholder="Search patients…"/>
+          <h2> All Patients</h2>
+          <input class="search-input" id="patientSearch" type="text" placeholder="Search patients..."/>
         </div>
         <div class="section-body table-wrap">
           <table><thead><tr><th>Patient ID</th><th>Name</th><th>DOB</th><th>Medicare No.</th><th>Contact</th><th>Address</th></tr></thead>
-          <tbody id="patientsBody"><tr><td colspan="6"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody></table>
+          <tbody id="patientsBody"><tr><td colspan="6"><div class="loading"><div class="spinner"></div> Loading...</div></td></tr></tbody></table>
         </div>
       </div>
       <div class="section-card" id="vitals-form">
-        <div class="section-header"><h2>❤️ Record Vitals</h2></div>
+        <div class="section-header"><h2> Record Vitals</h2></div>
         <div class="section-body">
           <div class="form-grid">
             <div class="form-group"><label for="vPatientId">Patient ID</label><input type="text" id="vPatientId" placeholder="e.g. P-00123"/></div>
@@ -53,27 +53,28 @@
             <div class="form-group"><label for="vHR">Heart Rate (bpm)</label><input type="number" id="vHR" placeholder="e.g. 72"/></div>
             <div class="form-group"><label for="vTemp">Temperature (°C)</label><input type="number" id="vTemp" step="0.1" placeholder="e.g. 36.8"/></div>
             <div class="form-group"><label for="vWeight">Weight (kg)</label><input type="number" id="vWeight" step="0.1" placeholder="e.g. 75.5"/></div>
+            <div class="form-group"><label for="vTime">Time</label><input type="time" id="vTime" placeholder="e.g. 16:23"/></div>
           </div>
-          <button class="btn nurse" id="saveVitalsBtn" style="margin-top:8px;">💾 Save Vitals</button>
-          <p class="success-msg" id="vitalsSuccess">✅ Vitals recorded successfully.</p>
+          <button class="btn nurse" id="saveVitalsBtn" style="margin-top:8px;"> Save Vitals</button>
+          <p class="success-msg" id="vitalsSuccess"> Vitals recorded successfully.</p>
           <p class="error-msg" id="vitalsError"></p>
         </div>
       </div>
       <div class="section-card" id="notes-form">
-        <div class="section-header"><h2>📝 Add Nursing Note</h2></div>
+        <div class="section-header"><h2> Add Nursing Note</h2></div>
         <div class="section-body">
           <div class="form-grid">
             <div class="form-group"><label for="nPatientId">Patient ID</label><input type="text" id="nPatientId" placeholder="e.g. P-00123"/></div>
             <div class="form-group"><label for="nDate">Date</label><input type="date" id="nDate"/></div>
           </div>
-          <div class="form-group"><label for="nNote">Note</label><textarea id="nNote" placeholder="Enter nursing observation or note…"></textarea></div>
-          <button class="btn nurse" id="saveNoteBtn">💾 Save Note</button>
-          <p class="success-msg" id="noteSuccess">✅ Note saved successfully.</p>
+          <div class="form-group"><label for="nNote">Note</label><textarea id="nNote" placeholder="Enter nursing observation or note..."></textarea></div>
+          <button class="btn nurse" id="saveNoteBtn"> Save Note</button>
+          <p class="success-msg" id="noteSuccess"> Note saved successfully.</p>
           <p class="error-msg" id="noteError"></p>
         </div>
       </div>
       <div class="section-card">
-        <div class="section-header"><h2>📊 Recent Vitals Log</h2></div>
+        <div class="section-header"><h2> Recent Vitals Log</h2></div>
         <div class="section-body table-wrap">
           <table><thead><tr><th>Patient ID</th><th>Date</th><th>BP</th><th>HR</th><th>Temp</th><th>Weight</th></tr></thead>
           <tbody id="vitalsLogBody"><tr><td colspan="6"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody></table>
