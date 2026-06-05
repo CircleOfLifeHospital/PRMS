@@ -64,6 +64,66 @@
           <tbody id="recordsBody"><tr><td colspan="4"><div class="loading"><div class="spinner"></div> Loading...</div></td></tr></tbody></table>
         </div>
       </div>
+
+    <div class="section-card" id="appointments-form">
+        <div class="section-header"><h2> Book An Appointment </h2></div>
+        <div class="section-body">
+          <div class="form-grid">
+            <div class="form-group"><label for="pPatientId">Patient ID</label><input type="text" id="pPatientId" placeholder="e.g. P-00123"/></div>
+            <div class="form-group"><label for="pDocName">Select A Doctor</label>
+              <select id="sDoc">
+                <option value=""> Select Doctor </option>
+                <option value="Dr.Chen">Dr.Chen</option>
+                <option value="Dr.Singh">Dr.Singh</option>
+                <option value="Dr.Macht">Dr.Macht</option>
+              </select>
+            </div>
+            <div class="form-group"><label for="pTime">Select Time</label>
+              <select id="sTime">
+                <option value=""> Select Time </option>
+                <option value="10:00">10:00</option>
+                <option value="10:15">10:15</option>
+                <option value="10:30">10:30</option>
+                <option value="10:45">10:45</option>
+                <option value="11:00">11:00</option>
+                <option value="11:15">11:15</option>
+                <option value="11:30">11:30</option>
+                <option value="11:45">11:45</option>
+                <option value="12:00">12:00</option>
+                <option value="12:15">12:15</option>
+                <option value="12:30">12:30</option>
+                <option value="12:45">12:45</option>
+                <option value="13:00">13:00</option>
+                <option value="13:15">13:15</option>
+                <option value="13:30">13:30</option>
+                <option value="13:45">13:45</option>
+                <option value="14:00">14:00</option>
+                <option value="14:15">14:15</option>
+                <option value="14:30">14:30</option>
+                <option value="14:45">14:45</option>
+                <option value="15:00">15:00</option>
+                <option value="15:15">15:15</option>
+                <option value="15:30">15:30</option>
+                <option value="15:45">15:45</option>
+                <option value="16:00">16:00</option>
+                <option value="16:15">16:15</option>
+                <option value="16:30">16:30</option>
+                <option value="16:45">16:45</option>
+                <option value="17:00">17:00</option>
+                <option value="17:15">17:15</option>
+                <option value="17:30">17:30</option>
+                <option value="17:45">17:45</option>
+              </select>
+            
+            </div>
+            <div class="form-group"><label for="pDate">Date</label><input type="date" id="pDate"/></div>
+          </div>
+          <button class="btn doctor" id="savePrescriptionBtn"> Save Prescription</button>
+          <p class="success-msg" id="prescriptionSuccess"> Prescription saved successfully.</p>
+          <p class="error-msg" id="prescriptionError"></p>
+        </div>
+      </div>
+  
       <div class="section-card" id="appointments">
         <div class="section-header"><h2> Appointments</h2></div>
         <div class="section-body table-wrap">
