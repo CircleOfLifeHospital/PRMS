@@ -153,7 +153,7 @@ function wireLogin(expectedRole) {
     if (!email || !password) { showErr('errorMsg', 'Please enter your email and password.'); return; }
 
     btn.disabled    = true;
-    btn.textContent = 'Signing in…';
+    btn.textContent = 'Signing in...';
     if (errMsg) errMsg.style.display = 'none';
 
     try {
@@ -307,7 +307,25 @@ async function loadPatient(patientId, data, user) {
       err => console.error('medications snapshot:', err)
     );
   }
-    const appointmentsBody = $('appointmentsBody');
+
+const spBtn = $('saveAppointmentsBtn');
+  if (spBtn) spBtn.addEventListener('click', async () => {
+    const patientId = val('pPatientId'), patientName = val('pMedName');
+    if (!patientId || !patientName) { showErr('prescriptionError','Patient ID and name are required.'); return; }
+    try {
+      await addDoc(collection(db,'medications'), {
+        patientId, patientName,
+        date: val('pDate'), time: val('pTime'),
+        doctor: val('pDocName'), timestamp: serverTimestamp()
+      });
+      await logAccess('Appointments', patientId, );
+      showSuccess('bookingSuccess'); showErr('bookingError','');
+      clearForm(['pPatientId','pDocName','pDate','pTime']);
+    } catch(e) { showErr('bookingError', e.message); }
+  });
+
+
+const appointmentsBody = $('appointmentsBody');
   const statApp = $('statApp');
   if (appointmentsBody) {
     onSnapshot(
@@ -316,14 +334,14 @@ async function loadPatient(patientId, data, user) {
         const meds = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
         if (statApp) statApp.textContent = App.length;
         renderTable('appointmentsBody', App, 4,
-          m => `<td>${m.appointmentname||'—'}</td><td>${m.date||'—'}</td><td>${m.time||'—'}</td><td>${m.startDate||'—'}</td>`
+          m => `<td>${m.appointmentname||'—'}</td><td>${m.date||'—'}</td><td>${m.time||'—'}</td><td>${m.doctor||'—'}</td>`
         );
       },
       err => console.error('appointments snapshot:', err)
     );
   }
 }
-
+  
 // ═══════════════════════════════════════════════════════════════════════════════
 // NURSE DASHBOARD — unchanged from original
 // ═══════════════════════════════════════════════════════════════════════════════
