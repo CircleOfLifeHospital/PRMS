@@ -310,8 +310,8 @@ async function loadPatient(patientId, data, user) {
 
 const spBtn = $('saveAppointmentsBtn');
   if (spBtn) spBtn.addEventListener('click', async () => {
-    const patientId = val('pPatientId'), patientName = val('pMedName');
-    if (!patientId || !patientName) { showErr('prescriptionError','Patient ID and name are required.'); return; }
+    const patientId = val('pPatientId'), patientName = val('pPatientName');
+    if (!patientId || !patientName) { showErr('bookingError','Patient ID and name are required.'); return; }
     try {
       await addDoc(collection(db,'medications'), {
         patientId, patientName,
