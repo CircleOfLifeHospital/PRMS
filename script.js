@@ -307,6 +307,21 @@ async function loadPatient(patientId, data, user) {
       err => console.error('medications snapshot:', err)
     );
   }
+    const appointmentsBody = $('appointmentsBody');
+  const statApp = $('statApp');
+  if (appointmentsBody) {
+    onSnapshot(
+      query(collection(db, 'appointments'), where('patientId','==',patientId)),
+      snap => {
+        const meds = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+        if (statApp) statApp.textContent = App.length;
+        renderTable('appointmentsBody', App, 4,
+          m => `<td>${m.appointmentname||'—'}</td><td>${m.date||'—'}</td><td>${m.time||'—'}</td><td>${m.startDate||'—'}</td>`
+        );
+      },
+      err => console.error('appointments snapshot:', err)
+    );
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
