@@ -308,12 +308,12 @@ async function loadPatient(patientId, data, user) {
     );
   }
 
-const spBtn = $('saveAppointmentsBtn');
-  if (spBtn) spBtn.addEventListener('click', async () => {
+const saBtn = $('saveAppointmentsBtn');
+  if (saBtn) saBtn.addEventListener('click', async () => {
     const patientId = val('pPatientId'), patientName = val('pPatientName');
     if (!patientId || !patientName) { showErr('bookingError','Patient ID and name are required.'); return; }
     try {
-      await addDoc(collection(db,'medications'), {
+      await addDoc(collection(db,'appointments'), {
         patientId, patientName,
         date: val('pDate'), time: val('pTime'),
         doctor: val('pDocName'), timestamp: serverTimestamp()
