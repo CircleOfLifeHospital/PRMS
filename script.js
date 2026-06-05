@@ -310,17 +310,17 @@ async function loadPatient(patientId, data, user) {
 
 const saBtn = $('saveAppointmentsBtn');
   if (saBtn) saBtn.addEventListener('click', async () => {
-    const patientId = val('pPatientId'), patientName = val('pPatientName');
+    const patientId = val('aPatientId'), patientName = val('aPatientName');
     if (!patientId || !patientName) { showErr('bookingError','Patient ID and name are required.'); return; }
     try {
       await addDoc(collection(db,'appointments'), {
         patientId, patientName,
-        date: val('pDate'), time: val('pTime'),
-        doctor: val('pDocName'), timestamp: serverTimestamp()
+        date: val('aDate'), time: val('aTime'),
+        doctor: val('aDocName'), timestamp: serverTimestamp()
       });
       await logAccess('Appointments', patientId, );
       showSuccess('bookingSuccess'); showErr('bookingError','');
-      clearForm(['pPatientId','pDocName','pDate','pTime']);
+      clearForm(['aPatientId','aDocName','aDate','aTime']);
     } catch(e) { showErr('bookingError', e.message); }
   });
 

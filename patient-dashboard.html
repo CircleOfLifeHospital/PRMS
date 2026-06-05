@@ -69,18 +69,18 @@
         <div class="section-header"><h2> Book An Appointment </h2></div>
         <div class="section-body">
           <div class="form-grid">
-            <div class="form-group"><label for="pPatientId">Patient ID</label><input type="text" id="pPatientId" placeholder="e.g. P-00123"/></div>
-            <div class="form-group"><label for="pPatientName">Patient Name</label><input type="text" id="pPatientName" placeholder="e.g. John Smith"/></div>
-            <div class="form-group"><label for="pDocName">Select A Doctor</label>
-              <select id="sDoc">
+            <div class="form-group"><label for="aPatientId">Patient ID</label><input type="text" id="aPatientId" placeholder="e.g. P-00123"/></div>
+            <div class="form-group"><label for="aPatientName">Patient Name</label><input type="text" id="aPatientName" placeholder="e.g. John Smith"/></div>
+            <div class="form-group"><label for="aDocName">Select A Doctor</label>
+              <select id="aDocName">
                 <option value=""> Select Doctor </option>
                 <option value="Dr.Chen">Dr.Chen</option>
                 <option value="Dr.Singh">Dr.Singh</option>
                 <option value="Dr.Macht">Dr.Macht</option>
               </select>
             </div>
-            <div class="form-group"><label for="pTime">Select Time</label>
-              <select id="sTime">
+            <div class="form-group"><label for="aTime">Select Time</label>
+              <select id="aTime">
                 <option value=""> Select Time </option>
                 <option value="10:00">10:00</option>
                 <option value="10:15">10:15</option>
@@ -117,11 +117,11 @@
               </select>
             
             </div>
-            <div class="form-group"><label for="pDate">Date</label><input type="date" id="pDate"/></div>
+            <div class="form-group"><label for="aDate">Date</label><input type="date" id="aDate"/></div>
           </div>
-          <button class="btn doctor" id="savePrescriptionBtn"> Book Appointment </button>
-          <p class="success-msg" id="prescriptionSuccess"> Appointment booked successfully.</p>
-          <p class="error-msg" id="prescriptionError"></p>
+          <button class="btn doctor" id="saveAppointmentsBtn"> Book Appointment </button>
+          <p class="success-msg" id="bookingSuccess"> Appointment booked successfully.</p>
+          <p class="error-msg" id="bookingError"></p>
         </div>
       </div>
   
