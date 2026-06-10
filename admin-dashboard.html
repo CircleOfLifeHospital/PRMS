@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Admin Dashboard — Circle of Life Hospital</title>
+  <title>Admin Dashboard - Circle of Life Hospital</title>
   <link rel="stylesheet" href="style.css"/>
   <script>const t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t);</script>
 </head>
@@ -13,19 +13,19 @@
     <a href="index.html" class="sidebar-logo"><div class="logo-icon"></div><div class="logo-text">Circle of <span>Life</span></div></a>
     <div class="sidebar-user">
       <div class="user-avatar" style="background:rgba(183,28,28,0.15);color:#B71C1C;" id="userAvatar">A</div>
-      <div class="user-name" id="userName">Loading…</div>
+      <div class="user-name" id="userName">Loading..</div>
       <div class="user-role">Administrator</div>
     </div>
     <nav class="sidebar-nav">
       <div class="sidebar-section-label">Administration</div>
-      <a href="#stats" class="active"><span class="nav-icon"></span> Overview</a>
-      <a href="#staff-table"><span class="nav-icon"></span> Staff Accounts</a>
-      <a href="#add-staff"><span class="nav-icon"></span> Add Staff</a>
-      <a href="#register-patient"><span class="nav-icon"></span> Register Patient</a>
-      <a href="#access-log"><span class="nav-icon"></span> Access Log</a>
+      <a href="#stats" class="active"> Overview</a>
+      <a href="#staff-table"> Staff Accounts</a>
+      <a href="#add-staff"> Add Staff</a>
+      <a href="#register-patient"> Register Patient</a>
+      <a href="#access-log"> Access Log</a>
     </nav>
     <div class="sidebar-footer">
-      <button class="sidebar-theme-btn" id="themeToggle"> <span id="themeLabel">Dark Mode</span></button>
+      <button class="sidebar-theme-btn" id="themeToggle"> <span id="themeLabel">Light Mode</span></button>
       <button id="logoutBtn"> Sign Out</button>
     </div>
   </aside>
@@ -46,11 +46,11 @@
       <div class="section-card" id="staff-table">
         <div class="section-header">
           <h2> Staff Accounts</h2>
-          <input class="search-input" id="staffSearch" type="text" placeholder="Search staff…"/>
+          <input class="search-input" id="staffSearch" type="text" placeholder="Search staff..."/>
         </div>
         <div class="section-body table-wrap">
           <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Department</th></tr></thead>
-          <tbody id="staffBody"><tr><td colspan="4"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody></table>
+          <tbody id="staffBody"><tr><td colspan="4"><div class="loading"><div class="spinner"></div> Loading...</div></td></tr></tbody></table>
         </div>
       </div>
 
@@ -111,7 +111,7 @@
         <div class="section-header"><h2> Access Log</h2></div>
         <div class="section-body table-wrap">
           <table><thead><tr><th>Timestamp</th><th>Patient ID</th><th>Staff ID</th><th>Action</th></tr></thead>
-          <tbody id="logBody"><tr><td colspan="4"><div class="loading"><div class="spinner"></div> Loading…</div></td></tr></tbody></table>
+          <tbody id="logBody"><tr><td colspan="4"><div class="loading"><div class="spinner"></div> Loading...</div></td></tr></tbody></table>
         </div>
       </div>
 
