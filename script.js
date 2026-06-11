@@ -264,21 +264,20 @@ const saBtn = $('saveAppointmentsBtn');
     } catch(e) { showErr('bookingError', e.message); }
   });
 
-
-const appointmentsBody = $('appointmentsBody');
-  const statApp = $('statApp');
-  if (appointmentsBody) {
+//Saves appointments via OnSnapshot for the patients to view appointments
+const apptBody = $('appointmentsBody');
+  if (apptBody) {
     onSnapshot(
-      query(collection(db, 'appointments'), where('patientId','==',patientId)),
+      query(collection(db, 'appointments'), orderBy('timestamp', 'desc')
+    ),where('patientId','==',patientId)),
       snap => {
-        const meds = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+        const appointments = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
         if (statApp) statApp.textContent = App.length;
         renderTable('appointmentsBody', App, 4,
-          m => `<td>${m.appointmentname||'—'}</td><td>${m.date||'—'}</td><td>${m.time||'—'}</td><td>${m.doctor||'—'}</td>`
+          a => `<td>${a.appointmentname||'—'}</td><td>${a.date||'—'}</td><td>${a.time||'—'}</td><td>${a.patientName || a.patientId ||'—'}</td><td>${a.doctor||'—'}</td>`
         );
       },
-      err => console.error('appointments snapshot:', err)
-    );
+      err => console.error('appointments snapshot:', err);
   }
 }
   
