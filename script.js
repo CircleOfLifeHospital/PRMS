@@ -18,9 +18,9 @@ function initTheme() {
   const apply = t => {
     document.documentElement.setAttribute('data-theme', t);
     localStorage.setItem('theme', t);
-    if (toggle.tagName === 'BUTTON' && !label) toggle.textContent = t === 'dark' ? 'light mode' : 'dark mode';
+    if (toggle.tagName === 'BUTTON' && !label) toggle.textContent = t === 'dark' ? 'Light mode' : 'Dark mode';
     if (label) label.textContent = t === 'dark' ? 'Light Mode' : 'Dark Mode';
-    if (toggle.tagName === 'BUTTON' && label) toggle.firstChild.textContent = t === 'dark' ? 'light mode ' : 'dark mode ';
+    if (toggle.tagName === 'BUTTON' && label) toggle.firstChild.textContent = t === 'dark' ? 'Light Mode ' : 'Dark Mode ';
   };
   apply(localStorage.getItem('theme') || 'light');
   toggle.addEventListener('click', () =>
@@ -423,11 +423,16 @@ async function loadDoctor(staffId, data) {
       query(collection(db, 'appointments'), where('patientId','==',patientId)),
       snap => {
         const appointments = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
-        renderTable('AppointmentsBody', appointments, 4,
-          a => `<td>${a.appointmentname||'—'}</td><td>${a.date||'—'}</td><td>${a.time||'—'}</td><td>${a.patientName || a.patientId ||'—'}</td><td>${a.doctor||'—'}</td>`
+        renderTable('AppointmentsBody', appointments, 5,
+          a => `
+          <td>${a.patientId||'—'}</td>
+          <td>${a.patientName||'—'}</td>
+          <td>${a.doctor||'—'}</td>
+          <td>${a.time||'—'}</td>
+          <td>${a.date||'—'}</td>`
         );
       },
-      err => console.error('medications snapshot:', err)
+      err => console.error('appointments snapshot:', err)
     );
   }
 }
