@@ -346,7 +346,7 @@ async function loadDoctor(staffId, data) {
 
   renderTable('patientsBody', patients, 5, pRow);
   renderTable('recordsBody',  records,  5, rRow);
-  renderTable('AppointmentsBody', appointments, 4, pRow);
+  renderTable('AppointmentsBody', appointments, 5, aRow);
   wireSearch('patientSearch','patientsBody', patients, 5, pRow, p=>`${p.patientId} ${p.name}`.toLowerCase());
   wireSearch('recordSearch', 'recordsBody',  records,  5, rRow, r=>`${r.patientId} ${r.diagnosis}`.toLowerCase());
 
