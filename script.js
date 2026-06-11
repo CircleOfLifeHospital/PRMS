@@ -215,11 +215,11 @@ async function loadPatient(patientId, data, user) {
     <div class="info-item"><div class="info-label">Email</div><div class="info-value">${data.email||'—'}</div></div>
   `;
 
-  // Static data loaded once (records, vitals, appointments, notes) — original approach
-  const [records, vitals, appts, notes] = await Promise.all([
+  // Static data loaded once (records, vitals, appointments) — original approach
+  const [records, vitals, appts] = await Promise.all([
     fetchAll('records',      [where('patientID','==',patientId), orderBy('date','desc')]),
+    fetchAll('vitals',      [where('patientID','==',patientId), orderBy('date','desc')]),
     fetchAll('appointments', [where('patientId','==',patientId), orderBy('date','desc')]),
-    fetchAll('nursingNotes', [where('patientId','==',patientId), orderBy('date','desc')])
   ]);
 
   setText('statRecords', records.length);
@@ -268,12 +268,13 @@ const saBtn = $('saveAppointmentsBtn');
 const apptBody = $('appointmentsBody');
   if (apptBody) {
     onSnapshot(
-      query(collection(db, 'appointments'), orderBy('timestamp', 'desc')
-    ),where('patientId','==',patientId)),
+      query(collection(db, 'appointments'), 
+      where('patientId','==',patientId)),
+      orderBy('timestamp', 'desc')
+    ),
       snap => {
         const appointments = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
-        if (statApp) statApp.textContent = App.length;
-        renderTable('appointmentsBody', App, 4,
+        renderTable('appointmentsBody', Appointments, 4,
           a => `<td>${a.appointmentname||'—'}</td><td>${a.date||'—'}</td><td>${a.time||'—'}</td><td>${a.patientName || a.patientId ||'—'}</td><td>${a.doctor||'—'}</td>`
         );
       },
