@@ -85,7 +85,7 @@ async function logAccess(action, patientID, staffID) {
   catch (e) { console.error('logAccess:', e); }
 }
 
-// Detect the Role
+//Role detection
 
 async function getRoleData(user) {
   const pSnap = await getDocs(query(collection(db, 'patients'), where('firebaseUid', '==', user.uid)));
@@ -105,8 +105,7 @@ function dashboardFor(role) {
   return { patient: 'patient-dashboard.html', nurse: 'nurse-dashboard.html', doctor: 'doctor-dashboard.html', admin: 'admin-dashboard.html' }[role] || 'index.html';
 }
 
-//Authentication 
-
+//Auth state
 onAuthStateChanged(auth, async user => {
   if (user) {
     const { role, id, data } = await getRoleData(user);
@@ -131,13 +130,13 @@ onAuthStateChanged(auth, async user => {
   }
 });
 
-//Logout Process
+//Logout
 function wireLogout() {
   const btn = $('logoutBtn');
   if (btn) btn.addEventListener('click', async () => { await signOut(auth); window.location.href = 'index.html'; });
 }
 
-//Login Process
+//Login pages
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   if (LOGIN_PAGES.includes(PAGE)) wireLogin(PAGE.replace('-login.html', ''));
@@ -167,9 +166,7 @@ function wireLogin(expectedRole) {
         btn.disabled = false; btn.textContent = 'Sign In';
         return;
       }
-     
-// Error for Authentication state 
-
+      // onAuthStateChanged will redirect
     } catch (err) {
       const msg =
         err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' ? 'Invalid email or password.' :
@@ -186,10 +183,10 @@ function wireLogin(expectedRole) {
     const el = $(id);
     if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
   });
+}
 
 
-
-
+//Patient ID generator
 async function generatePatientId() {
   const snap = await getDocs(query(collection(db, 'patients'), orderBy('patientId', 'desc')));
   if (!snap.empty) {
@@ -199,10 +196,8 @@ async function generatePatientId() {
   }
   return 'P-00001';
 }
-}
 
-
-//Patient Dash
+// PATIENT DASHBOARD
 async function loadPatient(patientId, data, user) {
   const name = data?.name || 'Patient';
   setText('userName', name);
@@ -220,8 +215,7 @@ async function loadPatient(patientId, data, user) {
     <div class="info-item"><div class="info-label">Email</div><div class="info-value">${data.email||'—'}</div></div>
   `;
 
-  //Normal Data already on Firestore
-
+  // Static data loaded once (records, vitals, appointments, notes) — original approach
   const [records, vitals, appts, notes] = await Promise.all([
     fetchAll('records',      [where('patientID','==',patientId), orderBy('date','desc')]),
     fetchAll('appointments', [where('patientId','==',patientId), orderBy('date','desc')]),
@@ -230,6 +224,7 @@ async function loadPatient(patientId, data, user) {
 
   setText('statRecords', records.length);
   setText('statAppts',   appts.length);
+
 
 
   renderTable('recordsBody',      records, 4, r=>`<td>${r.date||'—'}</td><td>${r.diagnosis||'—'}</td><td>${r.treatment||'—'}</td><td>${r.notes||'—'}</td>`);
@@ -253,47 +248,42 @@ async function loadPatient(patientId, data, user) {
     );
   }
 
-  const saBtn = $('saveAppointmentsBtn');
+const saBtn = $('saveAppointmentsBtn');
   if (saBtn) saBtn.addEventListener('click', async () => {
-    const patientId = val('aPatientId'), 
-    patientName = val('aPatientName');
-    if (!patientId, !patientName) { showErr('bookingError','Patient ID and name are required.'); return; }
+    const patientId = val('aPatientId'), patientName = val('aPatientName');
+    if (!patientId || !patientName) { showErr('bookingError','Patient ID and name are required.'); return; }
     try {
       await addDoc(collection(db,'appointments'), {
-        patientId, 
-        patientName,
-        date: val('aDate'), 
-        time: val('aTime'),
-        doctor: val('aDocName'), 
-        timestamp: serverTimestamp()
+        patientId, patientName,
+        date: val('aDate'), time: val('aTime'),
+        doctor: val('aDocName'), timestamp: serverTimestamp()
       });
       await logAccess('Appointments', patientId, );
       showSuccess('bookingSuccess'); showErr('bookingError','');
       clearForm(['aPatientId','aDocName','aDate','aTime']);
-    } catch(e) { showErr('bookingError', e.message); 
-
-    }
+    } catch(e) { showErr('bookingError', e.message); }
   });
-  const appointmentsBody = $('appointmentsBody');
-  const statAppts = $('statAppts');
+
+
+const appointmentsBody = $('appointmentsBody');
+  const statApp = $('statApp');
   if (appointmentsBody) {
     onSnapshot(
       query(collection(db, 'appointments'), where('patientId','==',patientId)),
       snap => {
-        const appts = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
-        if (statAppts) statAppts.textContent = Appts.length;
-        renderTable('appointmentsBody', Appts, 4,
-          a => `<td>${a.patientID,'—'}</td><td>${a.date,'—'}</td><td>${a.time,'—'}</td><td>${a.doctor,'—'}</td>`
+        const meds = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+        if (statApp) statApp.textContent = App.length;
+        renderTable('appointmentsBody', App, 4,
+          m => `<td>${m.appointmentname||'—'}</td><td>${m.date||'—'}</td><td>${m.time||'—'}</td><td>${m.doctor||'—'}</td>`
         );
       },
       err => console.error('appointments snapshot:', err)
     );
   }
 }
+  
 
-
-
-// Nurse Dash
+// NURSE DASHBOARD
 async function loadNurse(staffId, data) {
   const name = data?.name || 'Nurse';
   setText('userName', name);
@@ -341,165 +331,150 @@ async function loadNurse(staffId, data) {
   });
 }
 
-//Doctor Dash
-  async function loadDoctor(staffId, data) {
-    const name = data?.name || 'Doctor';
-    setText('userName', name);
-    const av = $('userAvatar'); if (av) av.textContent = name[0].toUpperCase();
+// DOCTOR DASHBOARD — 
+async function loadDoctor(staffId, data) {
+  const name = data?.name || 'Doctor';
+  setText('userName', name);
+  const av = $('userAvatar'); if (av) av.textContent = name[0].toUpperCase();
 
-    const pRow = p => `<td>${p.patientId||'—'}</td><td>${p.name||'—'}</td><td>${p.dob||'—'}</td><td>${p.medicareNo||'—'}</td><td>${p.contact||'—'}</td>`;
-    const rRow = r => `<td>${r.patientID||'—'}</td><td>${r.date||'—'}</td><td>${r.diagnosis||'—'}</td><td>${r.treatment||'—'}</td><td>${r.notes||'—'}</td>`;
+  const pRow = p => `<td>${p.patientId||'—'}</td><td>${p.name||'—'}</td><td>${p.dob||'—'}</td><td>${p.medicareNo||'—'}</td><td>${p.contact||'—'}</td>`;
+  const rRow = r => `<td>${r.patientID||'—'}</td><td>${r.date||'—'}</td><td>${r.diagnosis||'—'}</td><td>${r.treatment||'—'}</td><td>${r.notes||'—'}</td>`;
 
-    const [patients, records] = await Promise.all([
-      fetchAll('patients',[]),
-      fetchAll('records', [orderBy('date','desc')])
-    ]);
+  const [patients, records, appointments, vitals] = await Promise.all([
+    fetchAll('patients',[]),
+    fetchAll('records', [orderBy('date','desc')]),
+    fetchAll('appointments', [orderBy('date','desc')]),
+    fetchAll('vitals', [orderBy('date','desc')])
+  ]);s
 
-    renderTable('patientsBody', patients, 5, pRow);
-    renderTable('recordsBody',  records,  5, rRow);
-    wireSearch('patientSearch','patientsBody', patients, 5, pRow, p=>`${p.patientId} ${p.name}`.toLowerCase());
-    wireSearch('recordSearch', 'recordsBody',  records,  5, rRow, r=>`${r.patientID} ${r.diagnosis}`.toLowerCase());
+  renderTable('patientsBody', patients, 5, pRow);
+  renderTable('recordsBody',  records,  5, rRow);
+  renderTable('AppointmentsBody', patients, 4, pRow);
+  renderTable('VitalsBody',  records,  6, rRow);
+  wireSearch('patientSearch','patientsBody', patients, 5, pRow, p=>`${p.patientId} ${p.name}`.toLowerCase());
+  wireSearch('recordSearch', 'recordsBody',  records,  5, rRow, r=>`${r.patientID} ${r.diagnosis}`.toLowerCase());
 
+  // Save diagnosis
+  const sdBtn = $('saveDiagnosisBtn');
+  if (sdBtn) sdBtn.addEventListener('click', async () => {
+    const patientID = val('dPatientId'), date = val('dDate'), diagnosis = val('dDiagnosis');
+    if (!patientID || !date || !diagnosis) { showErr('diagnosisError','Patient ID, date and diagnosis are required.'); return; }
+    try {
+      await addDoc(collection(db,'records'), {
+        patientID, date, diagnosis,
+        treatment: val('dTreatment'), notes: val('dNotes'),
+        staffID: staffId, timestamp: serverTimestamp()
+      });
+      await logAccess('Added diagnosis', patientID, staffId);
+      showSuccess('diagnosisSuccess'); showErr('diagnosisError','');
+      clearForm(['dPatientId','dDate','dDiagnosis','dTreatment','dNotes']);
+      const fresh = await fetchAll('records',[orderBy('date','desc')]);
+      renderTable('recordsBody', fresh, 5, rRow);
+    } catch(e) { showErr('diagnosisError', e.message); }
+  });
 
-    const sdBtn = $('saveDiagnosisBtn');
-    if (sdBtn) sdBtn.addEventListener('click', async () => {
-      const patientID = val('dPatientId'), date = val('dDate'), diagnosis = val('dDiagnosis');
-      if (!patientID, !date, !diagnosis) { showErr('diagnosisError','Patient ID, date and diagnosis are required.'); return; }
-      try {
-        await addDoc(collection(db,'records'), {
-          patientID, date, diagnosis,
-          treatment: val('dTreatment'), notes: val('dNotes'),
-          staffID: staffId, timestamp: serverTimestamp()
-        });
-        await logAccess('Added diagnosis', patientID, staffId);
-        showSuccess('diagnosisSuccess'); showErr('diagnosisError','');
-        clearForm(['dPatientId','dDate','dDiagnosis','dTreatment','dNotes']);
-        const fresh = await fetchAll('records',[orderBy('date','desc')]);
-        renderTable('recordsBody', fresh, 5, rRow);
-      } catch(e) { showErr('diagnosisError', e.message); }
-    });
-
-    const presBody = $('prescriptionsBody');
-    if (presBody) {
-      onSnapshot(
-        query(collection(db, 'medications'), orderBy('timestamp','desc')),
-        snap => {
-          const meds = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
-          renderTable('prescriptionsBody', meds, 5,
-            m => `<td>${m.patientId||'—'}</td><td>${m.medicationName||'—'}</td><td>${m.dosage||'—'}</td><td>${m.frequency||'—'}</td><td>${m.startDate||'—'}</td>`
-          );
-        },
-        err => console.error('prescriptions snapshot:', err)
-      );
-    }
-
-    const spBtn = $('savePrescriptionBtn');
-    if (spBtn) spBtn.addEventListener('click', async () => {
-      const patientId = val('pPatientId'), medicationName = val('pMedName');
-      if (!patientId || !medicationName) { showErr('prescriptionError','Patient ID and medication name are required.'); return; }
-      try {
-        await addDoc(collection(db,'medications'), {
-          patientId, medicationName,
-          dosage: val('pDosage'), frequency: val('pFrequency'), startDate: val('pStartDate'),
-          staffID: staffId, timestamp: serverTimestamp()
-        });
-        await logAccess('Prescribed medication', patientId, staffId);
-        showSuccess('prescriptionSuccess'); showErr('prescriptionError','');
-        clearForm(['pPatientId','pMedName','pDosage','pFrequency','pStartDate']);
-      } catch(e) { showErr('prescriptionError', e.message); }
-    });
-
-      const appointmentsBody = $('appointmentsBody');
-    const statAppts = $('statAppts');
-    if (appointmentsBody) {
-      onSnapshot(
-        query(collection(db, 'appointments'), where('patientId','==',patientId)),
-        snap => {
-          const appts = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
-          if (statAppts) statAppts.textContent = appts.length;
-          renderTable('appointmentsBody', apps, 4,
-            a => `<td>${a.patientId,'—'}</td><td>${a.date,'—'}</td><td>${a.time,'—'}</td>
-          );
-        },
-        err => console.error('medications snapshot:', err)
-      );
-    }
+  //Real-time prescriptions via onSnapshot so doctor can see all current prescriptions
+  const presBody = $('prescriptionsBody');
+  if (presBody) {
+    onSnapshot(
+      query(collection(db, 'medications'), orderBy('timestamp','desc')),
+      snap => {
+        const meds = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+        renderTable('prescriptionsBody', meds, 5,
+          m => `<td>${m.patientId||'—'}</td><td>${m.medicationName||'—'}</td><td>${m.dosage||'—'}</td><td>${m.frequency||'—'}</td><td>${m.startDate||'—'}</td>`
+        );
+      },
+      err => console.error('prescriptions snapshot:', err)
+    );
   }
 
-  //Admin dash
+  // Save prescription — writes to 'medications' collection (original collection name)
+  const spBtn = $('savePrescriptionBtn');
+  if (spBtn) spBtn.addEventListener('click', async () => {
+    const patientId = val('pPatientId'), medicationName = val('pMedName');
+    if (!patientId || !medicationName) { showErr('prescriptionError','Patient ID and medication name are required.'); return; }
+    try {
+      await addDoc(collection(db,'medications'), {
+        patientId, medicationName,
+        dosage: val('pDosage'), frequency: val('pFrequency'), startDate: val('pStartDate'),
+        staffID: staffId, timestamp: serverTimestamp()
+      });
+      await logAccess('Prescribed medication', patientId, staffId);
+      showSuccess('prescriptionSuccess'); showErr('prescriptionError','');
+      clearForm(['pPatientId','pMedName','pDosage','pFrequency','pStartDate']);
+    } catch(e) { showErr('prescriptionError', e.message); }
+  });
+}
 
-  async function loadAdmin(staffId, data) {
-    const name = data?.name || 'Admin';
-    setText('userName', name);
-    const av = $('userAvatar'); if (av) av.textContent = name[0].toUpperCase();
+// ADMIN DASHBOARD
+async function loadAdmin(staffId, data) {
+  const name = data?.name || 'Admin';
+  setText('userName', name);
+  const av = $('userAvatar'); if (av) av.textContent = name[0].toUpperCase();
 
-    const sRow = s => <td>${s.name,'—'}</td><td>${s.email,'—'}</td><td>${s.role,'—'}</td><td>${s.department,'—'} </td>`);
-    const pRow = p => `<td>${p.patientId||'—'}</td><td>${p.name||'—'}</td><td>${p.email||'—'}</td><td>${p.dob||'—'}</td><td>${p.medicareNo||'—'}</td><td>${p.contact||'—'}</td>`;
-    const lRow = l => `<td>${l.timestamp?.toDate?l.timestamp.toDate().toLocaleString():'—'}</td><td>${l.patientID||'—'}</td><td>${l.staffID||'—'}</td><td>${l.action||'—'}</td>`;
+  const sRow = s => `<td>${s.name||'—'}</td><td>${s.email||'—'}</td><td>${s.role||'—'}</td><td>${s.department||'—'}</td>`;
+  const pRow = p => `<td>${p.patientId||'—'}</td><td>${p.name||'—'}</td><td>${p.email||'—'}</td><td>${p.dob||'—'}</td><td>${p.medicareNo||'—'}</td><td>${p.contact||'—'}</td>`;
+  const lRow = l => `<td>${l.timestamp?.toDate?l.timestamp.toDate().toLocaleString():'—'}</td><td>${l.patientID||'—'}</td><td>${l.staffID||'—'}</td><td>${l.action||'—'}</td>`;
 
-    const [patients, staff, records, logs] = await Promise.all([
-      fetchAll('patients',  []),
-      fetchAll('staff',     []),
-      fetchAll('records',   []),
-      fetchAll('accessLog', [orderBy('timestamp','desc')])
-    ]);
+  const [patients, staff, records, logs] = await Promise.all([
+    fetchAll('patients',  []),
+    fetchAll('staff',     []),
+    fetchAll('records',   []),
+    fetchAll('accessLog', [orderBy('timestamp','desc')])
+  ]);
 
-    setText('statPatients', patients.length);
-    setText('statStaff',    staff.length);
-    setText('statRecords',  records.length);
-    setText('statLogs',     logs.length);
+  setText('statPatients', patients.length);
+  setText('statStaff',    staff.length);
+  setText('statRecords',  records.length);
+  setText('statLogs',     logs.length);
 
-    renderTable('staffBody',    staff,    4, sRow);
-    renderTable('patientsBody', patients, 6, pRow);
-    renderTable('logBody',      logs,     4, lRow);
+  renderTable('staffBody',    staff,    4, sRow);
+  renderTable('patientsBody', patients, 6, pRow);
+  renderTable('logBody',      logs,     4, lRow);
 
-    wireSearch('staffSearch',   'staffBody',    staff,    4, sRow, s=>`${s.name} ${s.email} ${s.role}`.toLowerCase());
-    wireSearch('patientSearch', 'patientsBody', patients, 6, pRow, p=>`${p.patientId} ${p.name} ${p.email}`.toLowerCase());
+  wireSearch('staffSearch',   'staffBody',    staff,    4, sRow, s=>`${s.name} ${s.email} ${s.role}`.toLowerCase());
+  wireSearch('patientSearch', 'patientsBody', patients, 6, pRow, p=>`${p.patientId} ${p.name} ${p.email}`.toLowerCase());
 
-    const asBtn = $('saveStaffBtn');
-    if (asBtn) asBtn.addEventListener('click', async () => {
-      const name = val('sName'), email = val('sEmail'), role = val('sRole'), dept = val('sDept');
-      if (!name || !email || !role) { showErr('staffError','Name, email and role are required.'); return; }
-      try {
-        await addDoc(collection(db,'staff'), { name, email, role, department: dept, timestamp: serverTimestamp() });
-        showSuccess('staffSuccess'); showErr('staffError','');
-        clearForm(['sName','sEmail','sRole','sDept']);
-        const fresh = await fetchAll('staff',[]);
-        setText('statStaff', fresh.length);
-        renderTable('staffBody', fresh, 4, sRow);
-      } catch(e) { showErr('staffError', e.message); }
-    });
+  // Add staff — original
+  const asBtn = $('saveStaffBtn');
+  if (asBtn) asBtn.addEventListener('click', async () => {
+    const name = val('sName'), email = val('sEmail'), role = val('sRole'), dept = val('sDept');
+    if (!name || !email || !role) { showErr('staffError','Name, email and role are required.'); return; }
+    try {
+      await addDoc(collection(db,'staff'), { name, email, role, department: dept, timestamp: serverTimestamp() });
+      showSuccess('staffSuccess'); showErr('staffError','');
+      clearForm(['sName','sEmail','sRole','sDept']);
+      const fresh = await fetchAll('staff',[]);
+      setText('statStaff', fresh.length);
+      renderTable('staffBody', fresh, 4, sRow);
+    } catch(e) { showErr('staffError', e.message); }
+  });
 
-    const rpBtn = $('savePatientBtn');
-    if (rpBtn) rpBtn.addEventListener('click', async () => {
-      const pName    = val('rpName'),    
-            pEmail  = val('rpEmail'),
-            pDob     = val('rpDOB'),     
-            pMed    = val('rpMedicare'),
-            pContact = val('rpContact'), 
-            pAddr   = val('rpAddress'),
-            pTemp = val('rpTempPassword');
-      if (!pName, !pEmail) { showErr('patientRegError','Name and email are required.'); return; }
-      try {
-        const cred    = await createUserWithEmailAndPassword(auth, pEmail, pTemp);
-        const newId   = await generatePatientId();
-        await addDoc(collection(db,'patients'), {
-          patientId: newId, 
-          name: pName, 
-          email: pEmail,
-          dob: pDob, 
-          medicareNo: pMed, 
-          contact: pContact, 
-          address: pAddr, 
-          temporary_password: pTemp, 
-          firebaseUid: cred.user.uid
-        });
-        await logAccess('Patient registered', newId, staffId);
-        showSuccess('patientRegSuccess'); showErr('patientRegError','');
-        clearForm(['rpName','rpEmail','rpDOB','rpMedicare','rpContact','rpAddress','rpTempPassword']);
-        const fresh = await fetchAll('patients');
-        setText('statPatients', fresh.length);
-        renderTable('patientsBody', fresh, 6, pRow);
-      } catch(e) { showErr('patientRegError', e.message); }
-    });
-  })}}
+  // NEW: Register patient — creates Firebase Auth account + patients doc
+  const rpBtn = $('savePatientBtn');
+  if (rpBtn) rpBtn.addEventListener('click', async () => {
+    const pName    = val('rpName'),    
+          pEmail  = val('rpEmail'),
+          pDob     = val('rpDOB'),    
+          pMed    = val('rpMedicare'),
+          pContact = val('rpContact'), 
+          pAddr   = val('rpAddress');
+    if (!pName || !pEmail) { showErr('patientRegError','Name and email are required.'); return; }
+    try {
+      const tmpPass = pEmail.split('@')[0] + 'Patient123!';
+      const cred    = await createUserWithEmailAndPassword(auth, pEmail, tmpPass);
+      const newId   = await generatePatientId();
+      await addDoc(collection(db,'patients'), {
+        patientId: newId, name: pName, email: pEmail,
+        dob: pDob, medicareNo: pMed, contact: pContact, address: pAddr,
+        firebaseUid: cred.user.uid
+      });
+      await logAccess('Patient registered', newId, staffId);
+      showSuccess('patientRegSuccess'); showErr('patientRegError','');
+      clearForm(['rpName','rpEmail','rpDOB','rpMedicare','rpContact','rpAddress']);
+      const fresh = await fetchAll('patients',[]);
+      setText('statPatients', fresh.length);
+      renderTable('patientsBody', fresh, 6, pRow);
+    } catch(e) { showErr('patientRegError', e.message); }
+  });
+}
