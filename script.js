@@ -270,7 +270,6 @@ const apptBody = $('appointmentsBody');
     onSnapshot(
       query(collection(db, 'appointments'), 
       where('patientId','==',patientId)),
-      orderBy('timestamp', 'desc')
     ),
       snap => {
         const appointments = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
