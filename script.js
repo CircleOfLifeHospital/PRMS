@@ -337,7 +337,8 @@ async function loadDoctor(staffId, data) {
 
   const pRow = p => `<td>${p.patientId||'—'}</td><td>${p.name||'—'}</td><td>${p.dob||'—'}</td><td>${p.medicareNo||'—'}</td><td>${p.contact||'—'}</td>`;
   const rRow = r => `<td>${r.d||'—'}</td><td>${r.date||'—'}</td><td>${r.diagnosis||'—'}</td><td>${r.treatment||'—'}</td><td>${r.notes||'—'}</td>`;
-
+  const aRow = a => ` <td>${a.patientId||'—'}</td><td>${a.patientName||'—'}</td><td>${a.doctor||'—'}</td><td>${a.time||'—'}</td><td>${a.date||'—'}</td>`;
+  
   const [patients, records, appointments] = await Promise.all([
     fetchAll('patients',[]),
     fetchAll('records'),
