@@ -80,8 +80,8 @@ function wireSearch(inputId, tbodyId, rows, colspan, rowFn, keyFn) {
   });
 }
 
-async function logAccess(action, patientID, staffID) {
-  try { await addDoc(collection(db, 'accessLog'), { action, patientID, staffID, timestamp: serverTimestamp() }); }
+async function logAccess(action, patientId, staffID) {
+  try { await addDoc(collection(db, 'accessLog'), { action, patientId, staffID, timestamp: serverTimestamp() }); }
   catch (e) { console.error('logAccess:', e); }
 }
 
@@ -217,8 +217,8 @@ async function loadPatient(patientId, data, user) {
 
   // Static data loaded once (records, vitals, appointments) — original approach
   const [records, vitals, appts] = await Promise.all([
-    fetchAll('records',      [where('patientID','==',patientId)]),
-    fetchAll('vitals',      [where('patientID','==',patientId)]),
+    fetchAll('records',      [where('patientId','==',patientId)]),
+    fetchAll('vitals',      [where('patientId','==',patientId)]),
     fetchAll('appointments', [where('patientId','==',patientId)]),
   ]);
 
@@ -267,12 +267,11 @@ const saBtn = $('saveAppointmentsBtn');
 const apptBody = $('appointmentsBody');
   if (apptBody) {
     onSnapshot(
-      query(collection(db, 'appointments'), 
+      query(collection(db, 'appointments')), 
       where('patientId','==',patientId)),
-    ),
       snap => {
         const appointments = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
-        renderTable('appointmentsBody', Appointments, 4,
+        renderTable('appointmentsBody', appointments, 4,
           a => `<td>${a.appointmentname||'—'}</td><td>${a.date||'—'}</td><td>${a.time||'—'}</td><td>${a.patientName || a.patientId ||'—'}</td><td>${a.doctor||'—'}</td>`
         );
       },
@@ -336,34 +335,34 @@ async function loadDoctor(staffId, data) {
   const av = $('userAvatar'); if (av) av.textContent = name[0].toUpperCase();
 
   const pRow = p => `<td>${p.patientId||'—'}</td><td>${p.name||'—'}</td><td>${p.dob||'—'}</td><td>${p.medicareNo||'—'}</td><td>${p.contact||'—'}</td>`;
-  const rRow = r => `<td>${r.patientID||'—'}</td><td>${r.date||'—'}</td><td>${r.diagnosis||'—'}</td><td>${r.treatment||'—'}</td><td>${r.notes||'—'}</td>`;
+  const rRow = r => `<td>${r.d||'—'}</td><td>${r.date||'—'}</td><td>${r.diagnosis||'—'}</td><td>${r.treatment||'—'}</td><td>${r.notes||'—'}</td>`;
 
   const [patients, records, appointments, vitals] = await Promise.all([
     fetchAll('patients',[]),
-    fetchAll('records', [orderBy('date','desc')]),
-    fetchAll('appointments', [orderBy('date','desc')]),
-    fetchAll('vitals', [orderBy('date','desc')])
-  ]);s
+    fetchAll('records'),
+    fetchAll('appointments'),
+    fetchAll('vitals')
+  ]);
 
   renderTable('patientsBody', patients, 5, pRow);
   renderTable('recordsBody',  records,  5, rRow);
-  renderTable('AppointmentsBody', patients, 4, pRow);
-  renderTable('VitalsBody',  records,  6, rRow);
+  renderTable('AppointmentsBody', appointments, 4, pRow);
+  renderTable('VitalsBody',  vitals,  6, rRow);
   wireSearch('patientSearch','patientsBody', patients, 5, pRow, p=>`${p.patientId} ${p.name}`.toLowerCase());
-  wireSearch('recordSearch', 'recordsBody',  records,  5, rRow, r=>`${r.patientID} ${r.diagnosis}`.toLowerCase());
+  wireSearch('recordSearch', 'recordsBody',  records,  5, rRow, r=>`${r.patientId} ${r.diagnosis}`.toLowerCase());
 
   // Save diagnosis
   const sdBtn = $('saveDiagnosisBtn');
   if (sdBtn) sdBtn.addEventListener('click', async () => {
-    const patientID = val('dPatientId'), date = val('dDate'), diagnosis = val('dDiagnosis');
-    if (!patientID || !date || !diagnosis) { showErr('diagnosisError','Patient ID, date and diagnosis are required.'); return; }
+    const patientId = val('dPatientId'), date = val('dDate'), diagnosis = val('dDiagnosis');
+    if (!patientId || !date || !diagnosis) { showErr('diagnosisError','Patient ID, date and diagnosis are required.'); return; }
     try {
       await addDoc(collection(db,'records'), {
-        patientID, date, diagnosis,
+        patientId, date, diagnosis,
         treatment: val('dTreatment'), notes: val('dNotes'),
         staffID: staffId, timestamp: serverTimestamp()
       });
-      await logAccess('Added diagnosis', patientID, staffId);
+      await logAccess('Added diagnosis', patientId, staffId);
       showSuccess('diagnosisSuccess'); showErr('diagnosisError','');
       clearForm(['dPatientId','dDate','dDiagnosis','dTreatment','dNotes']);
       const fresh = await fetchAll('records',[orderBy('date','desc')]);
@@ -402,6 +401,20 @@ async function loadDoctor(staffId, data) {
       clearForm(['pPatientId','pMedName','pDosage','pFrequency','pStartDate']);
     } catch(e) { showErr('prescriptionError', e.message); }
   });
+
+    const appointmentsBody = $('AppointmentsBody');
+  if (appointmentsBody) {
+    onSnapshot(
+      query(collection(db, 'appointments'), where('patientId','==',patientId)),
+      snap => {
+        const appointments = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+        renderTable('AppointmentsBody', appointments, 4,
+          a => `<td>${a.appointmentname||'—'}</td><td>${a.date||'—'}</td><td>${a.time||'—'}</td><td>${a.patientName || a.patientId ||'—'}</td><td>${a.doctor||'—'}</td>`
+        );
+      },
+      err => console.error('medications snapshot:', err)
+    );
+  }
 }
 
 // ADMIN DASHBOARD
@@ -412,7 +425,7 @@ async function loadAdmin(staffId, data) {
 
   const sRow = s => `<td>${s.name||'—'}</td><td>${s.email||'—'}</td><td>${s.role||'—'}</td><td>${s.department||'—'}</td>`;
   const pRow = p => `<td>${p.patientId||'—'}</td><td>${p.name||'—'}</td><td>${p.email||'—'}</td><td>${p.dob||'—'}</td><td>${p.medicareNo||'—'}</td><td>${p.contact||'—'}</td>`;
-  const lRow = l => `<td>${l.timestamp?.toDate?l.timestamp.toDate().toLocaleString():'—'}</td><td>${l.patientID||'—'}</td><td>${l.staffID||'—'}</td><td>${l.action||'—'}</td>`;
+  const lRow = l => `<td>${l.timestamp?.toDate?l.timestamp.toDate().toLocaleString():'—'}</td><td>${l.d||'—'}</td><td>${l.staffID||'—'}</td><td>${l.action||'—'}</td>`;
 
   const [patients, staff, records, logs] = await Promise.all([
     fetchAll('patients',  []),
@@ -456,16 +469,22 @@ async function loadAdmin(staffId, data) {
           pDob     = val('rpDOB'),    
           pMed    = val('rpMedicare'),
           pContact = val('rpContact'), 
-          pAddr   = val('rpAddress');
+          pAddr   = val('rpAddress'),
+          pTempPass = val('rpTempPassword');
     if (!pName || !pEmail) { showErr('patientRegError','Name and email are required.'); return; }
     try {
-      const tmpPass = pEmail.split('@')[0] + 'Patient123!';
       const cred    = await createUserWithEmailAndPassword(auth, pEmail, tmpPass);
       const newId   = await generatePatientId();
       await addDoc(collection(db,'patients'), {
-        patientId: newId, name: pName, email: pEmail,
-        dob: pDob, medicareNo: pMed, contact: pContact, address: pAddr,
-        firebaseUid: cred.user.uid
+        patientId: newId, 
+        name: pName, 
+        email: pEmail,
+        dob: pDob, 
+        medicareNo: pMed, 
+        contact: pContact, 
+        address: pAddr,
+        firebaseUid: cred.user.uid,
+        TempPassword: pTempPass
       });
       await logAccess('Patient registered', newId, staffId);
       showSuccess('patientRegSuccess'); showErr('patientRegError','');
