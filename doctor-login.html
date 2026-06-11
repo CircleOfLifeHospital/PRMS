@@ -4,14 +4,22 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Doctor Login - Circle of Life Hospital</title>
+  <link rel="icon" type="image/png" href="favicon-32x32.png">
   <link rel="stylesheet" href="style.css"/>
-  <script>const t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t);</script>
+  <script>
+  const t=localStorage.getItem('theme')
+  'light';document.documentElement.setAttribute('data-theme',t);
+  </script>
 </head>
 <body>
 <nav class="navbar">
-  <a href="index.html" class="navbar-logo"><div class="logo-icon"></div><span class="logo-text">Circle of <span>Life</span></span></a>
+  <a href="index.html" class="navbar-logo">
+    <div class="logo-icon"></div>
+    <span class="logo-text">Circle of <span>Life</span></span>
+  </a>
   <button class="theme-toggle" id="themeToggle"> Dark Mode </button>
 </nav>
+
 <div class="login-container">
   <div class="login-card">
     <h2>Staff Sign In</h2>
@@ -24,7 +32,7 @@
       <label for="password">Password</label>
       <input type="password" id="password" placeholder="********" autocomplete="current-password"/>
     </div>
-    <button class="btn btn-primary doctor" id="loginBtn" style="width:100%;">Sign In</button>
+    <button class="btn btn-primary doctor" id="loginBtn">Sign In</button>
     <p class="error-msg" id="errorMsg"></p>
     <a href="index.html" class="back-link"> ← Back to Portal Selection</a>
   </div>
