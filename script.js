@@ -197,6 +197,7 @@ async function generatePatientId() {
   return 'P-00001';
 }
 
+
 // PATIENT DASHBOARD
 async function loadPatient(patientId, data, user) {
   const name = data?.name || 'Patient';
@@ -215,7 +216,7 @@ async function loadPatient(patientId, data, user) {
     <div class="info-item"><div class="info-label">Email</div><div class="info-value">${data.email||'—'}</div></div>
   `;
 
-  // Static data loaded once (records, vitals, appointments) — original approach
+  // Normal Data being loaded
   const [records, vitals, appts] = await Promise.all([
     fetchAll('records',      [where('patientId','==',patientId)]),
     fetchAll('vitals',      [where('patientId','==',patientId)]),
@@ -337,21 +338,19 @@ async function loadDoctor(staffId, data) {
   const pRow = p => `<td>${p.patientId||'—'}</td><td>${p.name||'—'}</td><td>${p.dob||'—'}</td><td>${p.medicareNo||'—'}</td><td>${p.contact||'—'}</td>`;
   const rRow = r => `<td>${r.d||'—'}</td><td>${r.date||'—'}</td><td>${r.diagnosis||'—'}</td><td>${r.treatment||'—'}</td><td>${r.notes||'—'}</td>`;
 
-  const [patients, records, appointments, vitals] = await Promise.all([
+  const [patients, records, appointments] = await Promise.all([
     fetchAll('patients',[]),
     fetchAll('records'),
     fetchAll('appointments'),
-    fetchAll('vitals')
   ]);
 
   renderTable('patientsBody', patients, 5, pRow);
   renderTable('recordsBody',  records,  5, rRow);
   renderTable('AppointmentsBody', appointments, 4, pRow);
-  renderTable('VitalsBody',  vitals,  6, rRow);
   wireSearch('patientSearch','patientsBody', patients, 5, pRow, p=>`${p.patientId} ${p.name}`.toLowerCase());
   wireSearch('recordSearch', 'recordsBody',  records,  5, rRow, r=>`${r.patientId} ${r.diagnosis}`.toLowerCase());
 
-  // Save diagnosis
+  // Save diagnosis/record
   const sdBtn = $('saveDiagnosisBtn');
   if (sdBtn) sdBtn.addEventListener('click', async () => {
     const patientId = val('dPatientId'), date = val('dDate'), diagnosis = val('dDiagnosis');
@@ -370,22 +369,23 @@ async function loadDoctor(staffId, data) {
     } catch(e) { showErr('diagnosisError', e.message); }
   });
 
-  //Real-time prescriptions via onSnapshot so doctor can see all current prescriptions
-  const presBody = $('prescriptionsBody');
-  if (presBody) {
+  const recordBody = $('recordsBody');
+  if (recordBody) {
     onSnapshot(
-      query(collection(db, 'medications'), orderBy('timestamp','desc')),
+      query(collection(db, 'records'), orderBy('timestamp','desc')),
       snap => {
-        const meds = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
-        renderTable('prescriptionsBody', meds, 5,
-          m => `<td>${m.patientId||'—'}</td><td>${m.medicationName||'—'}</td><td>${m.dosage||'—'}</td><td>${m.frequency||'—'}</td><td>${m.startDate||'—'}</td>`
+        const record = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+        renderTable('recordsBody', records, 5,
+          l => `<td>${l.patientId||'—'}</td><td>${l.date||'—'}</td><td>${l.diagnosis||'—'}</td><td>${l.treatment||'—'}</td><td>${l.notes||'—'}</td>`
         );
       },
       err => console.error('prescriptions snapshot:', err)
     );
   }
 
-  // Save prescription — writes to 'medications' collection (original collection name)
+
+
+  // Save medications
   const spBtn = $('savePrescriptionBtn');
   if (spBtn) spBtn.addEventListener('click', async () => {
     const patientId = val('pPatientId'), medicationName = val('pMedName');
@@ -401,6 +401,21 @@ async function loadDoctor(staffId, data) {
       clearForm(['pPatientId','pMedName','pDosage','pFrequency','pStartDate']);
     } catch(e) { showErr('prescriptionError', e.message); }
   });
+
+  //Real-time prescriptions view through OnSnapshot function
+  const presBody = $('prescriptionsBody');
+  if (presBody) {
+    onSnapshot(
+      query(collection(db, 'medications'), orderBy('timestamp','desc')),
+      snap => {
+        const meds = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+        renderTable('prescriptionsBody', meds, 5,
+          m => `<td>${m.patientId||'—'}</td><td>${m.medicationName||'—'}</td><td>${m.dosage||'—'}</td><td>${m.frequency||'—'}</td><td>${m.startDate||'—'}</td>`
+        );
+      },
+      err => console.error('prescriptions snapshot:', err)
+    );
+  }
 
     const appointmentsBody = $('AppointmentsBody');
   if (appointmentsBody) {
@@ -436,7 +451,6 @@ async function loadAdmin(staffId, data) {
 
   setText('statPatients', patients.length);
   setText('statStaff',    staff.length);
-  setText('statRecords',  records.length);
   setText('statLogs',     logs.length);
 
   renderTable('staffBody',    staff,    4, sRow);
@@ -446,22 +460,37 @@ async function loadAdmin(staffId, data) {
   wireSearch('staffSearch',   'staffBody',    staff,    4, sRow, s=>`${s.name} ${s.email} ${s.role}`.toLowerCase());
   wireSearch('patientSearch', 'patientsBody', patients, 6, pRow, p=>`${p.patientId} ${p.name} ${p.email}`.toLowerCase());
 
-  // Add staff — original
-  const asBtn = $('saveStaffBtn');
-  if (asBtn) asBtn.addEventListener('click', async () => {
-    const name = val('sName'), email = val('sEmail'), role = val('sRole'), dept = val('sDept');
-    if (!name || !email || !role) { showErr('staffError','Name, email and role are required.'); return; }
-    try {
-      await addDoc(collection(db,'staff'), { name, email, role, department: dept, timestamp: serverTimestamp() });
-      showSuccess('staffSuccess'); showErr('staffError','');
-      clearForm(['sName','sEmail','sRole','sDept']);
-      const fresh = await fetchAll('staff',[]);
-      setText('statStaff', fresh.length);
-      renderTable('staffBody', fresh, 4, sRow);
-    } catch(e) { showErr('staffError', e.message); }
-  });
 
-  // NEW: Register patient — creates Firebase Auth account + patients doc
+  const asBtn = $('saveStaffBtn');
+    if (asBtn) asBtn.addEventListener('click', async () => {
+      const sName    = val('sName'),    
+            sEmail  = val('sEmail'),
+            sRole    = val('sRole'),    
+            sDept    = val('sDept'),
+            sTempPassword = val('sTempPassword');
+
+      if (!sName || !sEmail) { showErr('staffRegError','Name and email are required.'); return; }
+      try {
+        const cred    = await createUserWithEmailAndPassword(auth, sEmail, sTempPassword);
+        const newId   = await generateStaffId();
+        await addDoc(collection(db,'staff'), {
+          name: sName, 
+          email: sEmail,
+          Role: sRole,
+          Dept: sDept,
+          TempPassword: sTempPassword,
+          firebaseUid: cred.user.uid,
+        });
+        await logAccess('Staff registered');
+        showSuccess('staffRegSuccess'); showErr('staffRegError','');
+        clearForm(['sName','sEmail','sRole','sDept','STempPassword']);
+        const fresh = await fetchAll('staff',[]);
+        setText('statStaff', fresh.length);
+        renderTable('staffBody', fresh, 6, pRow);
+      } catch(e) { showErr('staffRegError', e.message); }
+    });
+
+  // Registration of patients 
   const rpBtn = $('savePatientBtn');
   if (rpBtn) rpBtn.addEventListener('click', async () => {
     const pName    = val('rpName'),    
@@ -470,10 +499,10 @@ async function loadAdmin(staffId, data) {
           pMed    = val('rpMedicare'),
           pContact = val('rpContact'), 
           pAddr   = val('rpAddress'),
-          pTempPass = val('rpTempPassword');
+          pTempPassword = val('rpTempPassword');
     if (!pName || !pEmail) { showErr('patientRegError','Name and email are required.'); return; }
     try {
-      const cred    = await createUserWithEmailAndPassword(auth, pEmail, tmpPass);
+      const cred    = await createUserWithEmailAndPassword(auth, pEmail, pTempPassword);
       const newId   = await generatePatientId();
       await addDoc(collection(db,'patients'), {
         patientId: newId, 
