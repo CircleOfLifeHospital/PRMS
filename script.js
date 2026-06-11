@@ -217,9 +217,9 @@ async function loadPatient(patientId, data, user) {
 
   // Static data loaded once (records, vitals, appointments) — original approach
   const [records, vitals, appts] = await Promise.all([
-    fetchAll('records',      [where('patientID','==',patientId), orderBy('date','desc')]),
-    fetchAll('vitals',      [where('patientID','==',patientId), orderBy('date','desc')]),
-    fetchAll('appointments', [where('patientId','==',patientId), orderBy('date','desc')]),
+    fetchAll('records',      [where('patientID','==',patientId)]),
+    fetchAll('vitals',      [where('patientID','==',patientId)]),
+    fetchAll('appointments', [where('patientId','==',patientId)]),
   ]);
 
   setText('statRecords', records.length);
@@ -229,7 +229,6 @@ async function loadPatient(patientId, data, user) {
 
   renderTable('recordsBody',      records, 4, r=>`<td>${r.date||'—'}</td><td>${r.diagnosis||'—'}</td><td>${r.treatment||'—'}</td><td>${r.notes||'—'}</td>`);
   renderTable('appointmentsBody', appts,   4, a=>`<td>${a.date||'—'}</td><td>${a.time||'—'}</td><td>${a.purpose||'—'}</td><td>${a.location||'—'}</td>`);
-  renderTable('notesBody',        notes,   2, n=>`<td>${n.date||'—'}</td><td>${n.note||'—'}</td>`);
 
   //Real-time medications via onSnapshot so doctor prescriptions appear instantly
   const medsBody = $('medsBody');
