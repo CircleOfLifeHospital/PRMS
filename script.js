@@ -272,8 +272,13 @@ const apptBody = $('appointmentsBody');
       where('patientId','==',patientId)),
       snap => {
         const appointments = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
-        renderTable('appointmentsBody', appointments, 4,
-          a => `<td>${a.appointmentname||'—'}</td><td>${a.date||'—'}</td><td>${a.time||'—'}</td><td>${a.patientName || a.patientId ||'—'}</td><td>${a.doctor||'—'}</td>`
+        renderTable('AppointmentsBody', appointments, 5,
+          a => `
+          <td>${a.patientId||'—'}</td>
+          <td>${a.patientName||'—'}</td>
+          <td>${a.doctor||'—'}</td>
+          <td>${a.time||'—'}</td>
+          <td>${a.date||'—'}</td>`
         );
       },
       err => console.error('appointments snapshot:', err);
@@ -337,8 +342,8 @@ async function loadDoctor(staffId, data) {
 
   const pRow = p => `<td>${p.patientId||'—'}</td><td>${p.name||'—'}</td><td>${p.dob||'—'}</td><td>${p.medicareNo||'—'}</td><td>${p.contact||'—'}</td>`;
   const rRow = r => `<td>${r.d||'—'}</td><td>${r.date||'—'}</td><td>${r.diagnosis||'—'}</td><td>${r.treatment||'—'}</td><td>${r.notes||'—'}</td>`;
-  const aRow = a => ` <td>${a.patientId||'—'}</td><td>${a.patientName||'—'}</td><td>${a.doctor||'—'}</td><td>${a.time||'—'}</td><td>${a.date||'—'}</td>`;
-  
+  const aRow = a =>` <td>${a.patientId||'—'}</td><td>${a.patientName||'—'}</td><td>${a.doctor||'—'}</td>td>${a.time||'—'}</td><td>${a.date||'—'}</td>`
+
   const [patients, records, appointments] = await Promise.all([
     fetchAll('patients',[]),
     fetchAll('records'),
