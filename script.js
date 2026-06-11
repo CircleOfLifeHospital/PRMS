@@ -193,8 +193,7 @@ function wireLogin(expectedRole) {
 async function generatePatientId() {
   const snap = await getDocs(query(collection(db, 'patients'), orderBy('patientId', 'desc')));
   if (!snap.empty) {
-    const last = snap.docs[0].data().patientId,
-    'P-00000';
+    const last = snap.docs[0].data().patientId || 'P-00000';
     const n = parseInt(last.split('-')[1] || '0');
     if (!isNaN(n)) return `P-${String(n + 1).padStart(5, '0')}`;
   }
